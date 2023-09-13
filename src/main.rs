@@ -1,49 +1,130 @@
+#[path = "modules\\appclass.rs"] mod appclass;
+use appclass::App;
+
+use std::string::ToString;
+use std::sync::Mutex;
 use serde::Deserialize;
 
 
 
+//reserved keywords : all
+static RESERVED_KEYWORDS: Mutex<Vec<&str>> = Mutex::new(Vec::new());
 
-#[derive(Deserialize)]
+/*
+#[derive(Deserialize, Clone)]
 struct App
 {
-    name : Option<String>,
+    name : String,
     address : String,
-    groups : Option<Vec<String>>,
+    groups : Vec<String>,
 }
 
 impl App
 {
-    fn get_name(&self)->String
+    fn new(address : String)->Self
     {
-        self.address.rsplit("\\").next ().unwrap ().to_string()
+        Self
+        {
+            address : address.clone(),
+            name : App::get_name(address.clone()),
+            groups : Vec::<String>::new(),
+
+        }
     }
-    fn set_name(mut self)
+
+    // extracts name of the app by its address
+    fn get_name(address : String)->String
     {
-        self.name = Some(self.get_name());
+        address.rsplit("\\").next ().unwrap ().to_string()
     }
-    fn reg_app(adress: String, apps : &mut Vec<App> ) -> bool
+    // sets name property using get_name
+    fn set_name(&mut self)
     {
+        self.name = App::get_name(self.address.clone());
+    }
+
+    fn exists_group(self, group : String) -> bool
+    {
+        for group_in_self in  self.groups
+        {
+            if group.eq(&group_in_self){
+                return true;
+            }
+        }
+        false
+    }
+
+    //returns amount of failed pushes already existing causes failing to push
+    fn add_groups(&mut self, groups : Vec<String>) -> i32
+    {
+        let mut failed_pushes = 0;
+        for group in groups
+        {
+            if self.to_owned().exists_group(group.clone()) {
+                failed_pushes += 1 }
+
+            else {
+                self.groups.push(group )}
+        }
+        return failed_pushes;
+    }
+    fn add_group(&mut self, group : String) -> bool
+    {
+        if self.to_owned().exists_group(group.clone()){ return false;}
+
+        self.groups.push(group.clone());
+
         true
     }
-    fn group_app()
-    {
+    //returns amount of failed removes
+    fn rem_groups(&mut self, groups : Vec<String>)->i32 {
 
+        let mut failed_removes = 0;
+
+        for group in groups {
+            if self.clone().exists_group(group.clone()) {
+
+                let index = self.groups.iter().position(|n| n.eq(&group));
+                self.groups.remove(index.unwrap());
+                failed_removes += 1;
+            }
+        }
+        failed_removes
+    }
+    //true if deletes
+    fn rem_group(&mut self, group : String)->bool {
+
+        if self.clone().exists_group(group.clone()) {
+
+            let index = self.groups.iter().position(|n| n.eq(&group));
+            self.groups.remove(index.unwrap());
+            return true;
+        }
+        false
     }
 
-
+    fn set_address(&mut self, address : String)
+    {
+        self.address = address.clone();
+        self.name = App::get_name(address);
+    }
 }
 
+
+
+struct Apps
+{
+    apps : Vec<App>,
+}
+*/
+
+
+
+
 fn main() {
-    let apps = Vec::<App>::new();
+    let app = appclass::App::new("dqwdwq".to_string());
 
-    println!("success");
 
-    let path = "C:\\Users\\hami\\Documents\\src\\rust\\program restarter\\not staged\\test programs\\2.bat".to_string();
-    let mut an_app = App{
-        address : path,
-        name : None,
-        groups : None
-    };
-
-    println!("{}", an_app.get_name().to_string());
+    RESERVED_KEYWORDS.lock().unwrap().push("all");
+    println!("{}", RESERVED_KEYWORDS.lock().unwrap().first().unwrap());
 }
