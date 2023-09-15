@@ -1,9 +1,15 @@
+use std::io;
 use std::string::ToString;
 use serde::Deserialize;
+use std::process::{Child, Command, Stdio};
 
-
-
-
+//need to get operating system
+struct UserPrefrence
+{
+    restart_error: bool,
+    restart_msg: bool,
+    app_msg: bool,
+}
 
 #[derive(Deserialize, Clone)]
 pub struct App
@@ -20,21 +26,21 @@ impl App
         Self
         {
             address: address.clone(),
-            name: App::get_name(address.clone()),
+            name: App::extract_name(address.clone()),
             groups: Vec::<String>::new(),
 
         }
     }
 
     // extracts name of the app by its address
-    pub fn get_name(address: String) -> String
+    pub fn extract_name(address: String) -> String
     {
         address.rsplit("\\").next().unwrap().to_string()
     }
     // sets name property using get_name
     pub fn set_name(&mut self)
     {
-        self.name = App::get_name(self.address.clone());
+        self.name = App::extract_name(self.address.clone());
     }
 
     pub fn exists_group(self, group: String) -> bool
@@ -100,7 +106,94 @@ impl App
     pub fn set_address(&mut self, address: String)
     {
         self.address = address.clone();
-        self.name = App::get_name(address);
+        self.name = App::extract_name(address);
+    }
+
+    pub fn get_name(self)->String
+    {
+        self.name
+    }
+
+    pub fn get_address(self)->String
+    {
+        self.address
+    }
+    pub fn get_groups(self)->Vec<String>
+    {
+        self.groups
+    }
+
+    pub fn run(self)
+    {
+        let mut command: &mut Command = &mut Command::new(self.address.clone());
+
+        App::redirect_output(command, None);
+
+        self.command_confirm(command.spawn(), "runn");
+    }
+
+    fn redirect_output(command :&mut Command, loc : Option<&str>)
+    {
+        match loc {
+            None => {
+                command.stdout(Stdio::null());
+                command.stderr(Stdio::null());
+            }
+            Some(_) => {
+
+            }
+        }
+    }
+    fn command_confirm(self, child : io::Result<Child>, action : &str)
+    {
+        match child {
+
+            Ok(mut child) => {
+                // The application is now running.
+                println!("{}ig {}",action , self.name);
+            }
+            Err(err) => {
+                eprintln!("Error {}ing {}: {}", action, self.name , err);
+            }
+        }
+    }
+
+    pub fn kill(self)
+    {
+
+        let mut command : &mut Command = &mut Command::new("taskkill");
+
+        command.arg("/F");
+        command.arg("/IM");
+        command.arg(self.name.clone());
+
+        App::redirect_output(command, None);
+
+        self.command_confirm(command.spawn(), "kill");
+
+    }
+
+    fn is_app_alive(process_name: &str) -> bool {
+        // Use the `tasklist` command on Windows to list running processes.
+        let tasklist_output = Command::new("tasklist")
+            .stdout(Stdio::piped())
+            .spawn()
+            .and_then(|child| child.wait_with_output());
+
+        match tasklist_output {
+            Ok(output) => {
+                let output_str = String::from_utf8_lossy(&output.stdout);
+                output_str.contains(process_name)
+            }
+            Err(_) => false, // Failed to run the command or read the output.
+        }
+    }
+    pub fn restart(self)
+    {
+        if App::is_app_alive(self.name.clone().as_str()) {
+            self.clone().kill();}
+
+        self.clone().run();
     }
 }
 
