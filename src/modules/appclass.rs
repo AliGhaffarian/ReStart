@@ -195,6 +195,24 @@ impl App
 
         self.clone().run();
     }
+
+    pub fn action(self, action : &str)->bool
+    {
+        match action
+        {
+            "kill" => {
+                self.clone().kill();
+                return true;},
+            "run" => {
+                self.clone().run();
+                return true;},
+            "restart" => {
+                self.clone().restart();
+                return true;
+            },
+            _ => return false,
+        }
+    }
 }
 
 
