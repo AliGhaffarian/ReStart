@@ -2,7 +2,7 @@ use std::ops::Index;
 use std::string::ToString;
 use serde::Deserialize;
 
-mod appclass;
+pub mod appclass;
 use appclass::App;
 
 #[derive(Deserialize, Clone)]
@@ -14,14 +14,27 @@ pub struct AppDB
 
 impl AppDB
 {
-    pub fn add_app(self, app : App)
+    pub fn new () -> Self
     {
-
+        Self{
+            apps : Vec::<App>::new(),
+        }
+    }
+    pub fn add_app(&mut self, app : App)
+    {
+        if self.clone().exists_name(app.clone().get_name()) == false {self.apps.push(app);}
     }
 
     pub fn exists(self, app : App)->bool
     {
-        true
+        let app_name = app.get_name();
+
+        for one_app in self.apps
+        {
+            if one_app.clone().get_name().eq(&app_name)
+            {return true;}
+        }
+        false
     }
 
     pub fn exists_name(self, name : String)->bool
@@ -62,13 +75,11 @@ impl AppDB
             if name.clone().eq(self.apps[i as usize].clone().get_name().as_str()){ return i as i32;}
         }
 
-        1
+        -1
     }
 
-    pub fn restart_group(self, groups : Vec<String>)
-    {
-    }
-    pub fn len(self)->i32
+
+    pub fn len(&self)->i32
     {
         self.apps.len() as i32
     }
@@ -78,39 +89,61 @@ impl AppDB
 
         Some(self.clone().apps[index as usize].clone())
     }
-    pub fn kill_group(self, group : Vec<String>)
-    {
 
-    }
 
     pub fn is_index_inbound(self, index : i32)->bool
     {
         (index < 0 || index >= self.clone().len())
     }
-    pub fn app_action(&mut self, app_name: String, action: &str) {
+    pub fn app_name_action(&mut self, app_name: String, action: &str) {
 
-        if let .[Some(index) = self.search_name(app_name) {
-            self.apps[index].action(action);
-        } else {
-            // Handle the case where the app is not found.
-            // You can choose to return an error or take some other action here.
-        }
+        let index = self.clone().search_name(app_name) as usize;
+
+        self.app_index_action(index, action);
+    }
+    pub fn app_index_action(&mut self, index : usize, action : &str)
+    {
+        self.apps[index].action(action);
     }
 
-    pub fn kill_index(self, index : i32)->bool
+    pub fn app_group_action(&mut self, groups : Vec<String>, action : &str)
     {
-        if self.is_index_inbound(index)
+        let lookup_result = self.groups_lookup(groups);
+
+        for i in lookup_result
         {
-            //self.clone().kill();
-            return true;
+            self.app_index_action(i, action);
         }
-        false
     }
 
-    pub fn restart_index(self, index : i32)->bool
+    pub fn groups_lookup(&self, groups : Vec<String>)->Vec<usize>
     {
-        true
+        let mut result = Vec::<usize>::new();
+
+        for group in &groups {
+            let indexes = self.group_lookup(group.clone());
+
+            // Iterate through the indexes and add them to result if they haven't been added already
+            for &index in &indexes {
+                if !result.contains(&index) {
+                    result.push(index);
+                }
+            }
+        }
+
+        result
     }
 
+    pub fn group_lookup(&self, group : String)->Vec<usize>
+    {
+        let mut result = Vec::<usize>::new();
+        for i   in 0..=self.len() -1
+        {
+            if self.apps[i as usize].clone().get_groups().contains(&group) {
+                result.push(i as usize);
+            }
+        }
+        result
+    }
 
 }
