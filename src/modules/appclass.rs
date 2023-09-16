@@ -148,7 +148,7 @@ impl App
     {
         match child {
 
-            Ok(mut child) => {
+            Ok(_) => {
                 // The application is now running.
                 println!("{}ig {}",action , self.name);
             }
@@ -196,7 +196,7 @@ impl App
         self.clone().run();
     }
 
-    pub fn action(self, action : &str)->bool
+    pub fn action(&mut self, action : &str)->bool
     {
         match action
         {
