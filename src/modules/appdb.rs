@@ -1,11 +1,15 @@
 use std::ops::Index;
 use std::string::ToString;
-use serde::Deserialize;
+use serde::{Serialize, Deserialize};
+use std::fs::File;
+use std::io::Read;
+use std::io::Write;
+use serde_json;
 
 pub mod appclass;
 use appclass::App;
 
-#[derive(Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct AppDB
 {
     apps : Vec<App>,
@@ -48,10 +52,8 @@ impl AppDB
     }
 
     //not done
-    pub fn search(self, app : App)->i32
+    pub fn search(self, app : App)->usize
     {
-        if (self.clone().exists(app.clone()) || self.clone().exists_name(app.clone().get_name())) == false {return -1;}
-
         for i in 0..= self.clone().len()
         {
             match self.clone().get_app(i){
@@ -64,7 +66,7 @@ impl AppDB
                 }
             }
         }
-        1
+        usize::MAX
     }
     pub fn search_name(self, name : String)->i32
     {
@@ -79,19 +81,19 @@ impl AppDB
     }
 
 
-    pub fn len(&self)->i32
+    pub fn len(&self)->usize
     {
-        self.apps.len() as i32
+        self.apps.len()
     }
-    pub fn get_app(self, index : i32)->Option<App>
+    pub fn get_app(self, index : usize)->Option<App>
     {
         if self.clone().is_index_inbound(index) {return None;}
 
-        Some(self.clone().apps[index as usize].clone())
+        Some(self.clone().apps[index].clone())
     }
 
 
-    pub fn is_index_inbound(self, index : i32)->bool
+    pub fn is_index_inbound(self, index : usize)->bool
     {
         (index < 0 || index >= self.clone().len())
     }
@@ -146,4 +148,53 @@ impl AppDB
         result
     }
 
+    pub fn remove_app(&mut self, app : App)
+    {
+        let index = self.clone().search(app);
+
+        if index == usize::MAX
+        {
+            return;
+        }
+        self.apps.remove(index as usize);
+    }
+
+    pub fn remove_app_groups(&mut self, groups : Vec<String>)
+    {
+        let indexes = self.groups_lookup(groups);
+
+        for i in indexes
+        {
+            self.apps.remove(i);
+        }
+    }
+
+    pub fn remove_groups(&mut self, groups : Vec<String>)
+    {
+        let indexes = self.groups_lookup(groups.clone());
+
+        for i in indexes
+        {
+            self.apps[i as usize].rem_groups(groups.clone());
+        }
+    }
+
+    pub fn save_to_json(filename: &str, data: &AppDB) -> Result<(), Box<dyn std::error::Error>> {
+        let json_data = serde_json::to_string(data)?;
+
+        let mut file = File::create(filename)?;
+        file.write_all(json_data.as_bytes())?;
+
+        Ok(())
+    }
+
+    pub fn load_from_json(filename: &str) -> Result<AppDB, Box<dyn std::error::Error>> {
+        let mut file = File::open(filename)?;
+        let mut json_data = String::new();
+        file.read_to_string(&mut json_data)?;
+
+        let app_db: AppDB = serde_json::from_str(&json_data)?;
+
+        Ok(app_db)
+    }
 }
