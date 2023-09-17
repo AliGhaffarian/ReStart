@@ -8,6 +8,7 @@ use serde_json;
 
 pub mod appclass;
 use appclass::App;
+use crate::appclass::utilities::util;
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct AppDB
@@ -60,7 +61,7 @@ impl AppDB
                 None => panic!(),
 
                 Some(an_app)=>{
-                    if an_app.get_name().as_str()
+                    if an_app.get_name().trim()
                         .eq(app.clone().get_name().as_str())
                             {return i;}
                 }
@@ -196,5 +197,19 @@ impl AppDB
         let app_db: AppDB = serde_json::from_str(&json_data)?;
 
         Ok(app_db)
+    }
+
+    pub fn add_group(&mut self, apps : Vec<String>, groups : Vec<String>)
+    {
+        for app in apps
+        {
+            let index = self.clone().search_name(app.clone().trim().to_string()) as usize;
+            if index == usize::MAX {
+                println!("app {} not found", app);
+                util::get_key();
+                return;
+            }
+            self.apps[index].add_groups(groups.clone());
+        }
     }
 }
