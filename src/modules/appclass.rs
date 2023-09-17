@@ -1,7 +1,8 @@
 use std::io;
 use std::string::ToString;
-use serde::Deserialize;
+use serde::{Serialize, Deserialize};
 use std::process::{Child, Command, Stdio};
+use serde_json;
 
 //need to get operating system
 struct UserPrefrence
@@ -11,7 +12,7 @@ struct UserPrefrence
     app_msg: bool,
 }
 
-#[derive(Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct App
 {
     name: String,
@@ -129,7 +130,7 @@ impl App
 
         App::redirect_output(command, None);
 
-        self.command_confirm(command.spawn(), "runn");
+        self.command_confirm(&command.spawn(), "runn");
     }
 
     fn redirect_output(command :&mut Command, loc : Option<&str>)
@@ -144,7 +145,7 @@ impl App
             }
         }
     }
-    fn command_confirm(self, child : io::Result<Child>, action : &str)
+    fn command_confirm(self, child : &io::Result<Child>, action : &str)
     {
         match child {
 
@@ -169,9 +170,15 @@ impl App
 
         App::redirect_output(command, None);
 
-        self.command_confirm(command.spawn(), "kill");
+        let child = command.spawn();
+
+        self.command_confirm(&child, "kill");
+
+        let _ = child.expect("").wait();
 
     }
+
+
 
     fn is_app_alive(process_name: &str) -> bool {
         // Use the `tasklist` command on Windows to list running processes.
