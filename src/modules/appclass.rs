@@ -3,7 +3,10 @@ use std::string::ToString;
 use serde::{Serialize, Deserialize};
 use std::process::{Child, Command, Stdio};
 use serde_json;
-
+use std::io::Read;
+use std::io::Write;
+#[path = "..\\ui\\utilities.rs"] pub mod utilities;
+use utilities::util;
 //need to get operating system
 struct UserPrefrence
 {
@@ -155,6 +158,7 @@ impl App
             }
             Err(err) => {
                 eprintln!("Error {}ing {}: {}", action, self.name , err);
+                util::get_key();
             }
         }
     }
