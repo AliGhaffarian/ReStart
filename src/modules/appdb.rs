@@ -10,7 +10,7 @@ pub mod appclass;
 use appclass::App;
 use crate::appclass::utilities::util;
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Default)]
 pub struct AppDB
 {
     apps : Vec<App>,
@@ -30,6 +30,13 @@ impl AppDB
         if self.clone().exists_name(app.clone().get_name()) == false {self.apps.push(app);}
     }
 
+    pub fn set_app_name_index(&mut self, index : usize , input : String)
+    {
+        if index >= self.len(){return}
+
+        self.apps[index].set_name_by_input(input);
+    }
+
     pub fn exists(self, app : App)->bool
     {
         let app_name = app.get_name();
@@ -42,8 +49,9 @@ impl AppDB
         false
     }
 
-    pub fn exists_name(self, name : String)->bool
+    pub fn exists_name(self, mut name : String)->bool
     {
+        name = name.trim().to_string();
         for app in self.apps
         {
             if app.clone().get_name().eq(name.clone().as_str())
@@ -69,8 +77,9 @@ impl AppDB
         }
         usize::MAX
     }
-    pub fn search_name(self, name : String)->i32
+    pub fn search_name(self, mut name : String)->i32
     {
+        name = name.trim().to_string();
         if self.clone().exists_name(name.clone()) == false{return -1;}
 
         for i in 0..=self.apps.len()
@@ -98,7 +107,9 @@ impl AppDB
     {
         (index < 0 || index >= self.clone().len())
     }
-    pub fn app_name_action(&mut self, app_name: String, action: &str) {
+    pub fn app_name_action(&mut self, mut app_name: String, action: &str) {
+
+        app_name = app_name.trim().to_string();
 
         let index = self.clone().search_name(app_name) as usize;
 
@@ -137,13 +148,15 @@ impl AppDB
         result
     }
 
-    pub fn group_lookup(&self, group : String)->Vec<usize>
+    pub fn group_lookup(&self, mut group : String)->Vec<usize>
     {
+        group = group.trim().to_string();
+
         let mut result = Vec::<usize>::new();
         for i   in 0..=self.len() -1
         {
-            if self.apps[i as usize].clone().get_groups().contains(&group) {
-                result.push(i as usize);
+            if self.apps[i].clone().get_groups().contains(&group) {
+                result.push(i );
             }
         }
         result
@@ -157,7 +170,20 @@ impl AppDB
         {
             return;
         }
-        self.apps.remove(index as usize);
+        self.apps.remove(index );
+    }
+
+    pub fn remove_app_name(&mut self, mut name : String)
+    {
+        name = name.trim().to_string();
+
+        let index = self.clone().search_name(name) as usize;
+
+        if index == usize::MAX
+        {
+            return;
+        }
+        self.apps.remove(index);
     }
 
     pub fn remove_app_groups(&mut self, groups : Vec<String>)
