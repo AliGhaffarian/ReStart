@@ -25,6 +25,14 @@ pub struct UI
 
 impl UI {
 
+    pub fn new()->Self
+    {
+        Self{
+            app_db : AppDB::new(),
+            saved : false,
+            defined_groups : Vec::<String>::new(),
+        }
+    }
     pub fn print_app_index(& self, index : usize, groups_included : bool)
     {
         let mut print_string : String;
@@ -77,7 +85,10 @@ impl UI {
 
     pub fn main_menu(&mut self)
     {
-        self.print_all_apps(true);
+        if self.app_db.len() == 0{
+            println!("no apps detected enter help to get started!")
+        }
+        else{self.print_all_apps(true);}
 
         let mut input = String::new();
 
