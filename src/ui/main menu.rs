@@ -6,23 +6,25 @@ use utilities::util;
 use serde::{Serialize, Deserialize};
 use serde_json;
 use std::fs::File;
-use std::io::Read;
+use std::io::{Read, stdin};
 use std::io::Write;
 use appdb::AppDB;
 use std::string::ToString;
 use serde_json::Value::String as otherString;
 use crate::appclass::App;
 use std::string::String;
-#[derive(Serialize, Deserialize, Clone)]
+use serde::de::Unexpected::Str;
+
+#[derive(Serialize, Deserialize, Clone, Default)]
 pub struct UI
 {
     pub app_db : AppDB,
-    pub commands : Vec<String>,
     pub saved : bool,
     pub defined_groups : Vec<String>,
 }
 
 impl UI {
+
     pub fn print_app_index(& self, index : usize, groups_included : bool)
     {
         let mut print_string : String;
@@ -79,7 +81,7 @@ impl UI {
 
         let mut input = String::new();
 
-        io::stdin().read_line(&mut input).expect("Failed to read line");
+        stdin().read_line(&mut input).expect("Failed to read line");
 
         let input_vec: Vec<String> = input.split(' ').map(|s| s.to_string()).collect();
 
@@ -91,7 +93,9 @@ impl UI {
     pub fn input_handler(&mut self, input_vec : Vec<String>)
     {
 
-        self.special_command_handler(input_vec.clone());
+        if self.special_command_handler(input_vec.clone()) {
+            return
+        }
 
 
         for mut input in input_vec
@@ -112,29 +116,44 @@ impl UI {
         }
     }
 
-    pub fn special_command_handler(&mut self, input_vec : Vec<String>)
+    pub fn special_command_handler(&mut self, input_vec : Vec<String>)->bool
     {
         match input_vec[0].trim()
         {
+            "help" => Self::help(),
             "quit" => self.quit(),
             "reg" => self.regs(input_vec),
-            "save" => self.save_to_json("files and groups").expect("file not found please make a \"files and groups\".json"),
-            "del" => self.del_app(),
+            "save" => self.save_to_json("files and groups.json").expect("file not found please make a \"files and groups\".json"),
+            "del" => self.dels(input_vec),
             "group" => self.group_app(),
             "print" => self.prints(input_vec),
-            _ =>return,
+            _ =>return false,
         }
+        true
     }
 
     pub fn quit(&mut self)
     {
-        println!("quit called!");
+        if self.saved == false
+        {
+            let mut input = String::new();
+            println!("you made changes that haven't been saved wanna save them now? Y/N");
+            stdin().read_line(&mut input).expect("failed to get input");
+            if input.trim() == "Y"{
+                self.save_to_json("files and groups.json").expect("failed to save");
+                self.saved = true;
+            }
+        }
+
+        std::process::exit(0);
     }
-    pub fn save_to_json(&self, filename: &str) -> Result<(), Box<dyn std::error::Error>> {
+    pub fn save_to_json(&mut self, filename: &str) -> Result<(), Box<dyn std::error::Error>> {
         let json_data = serde_json::to_string(self)?;
 
         let mut file = File::create(filename)?;
         file.write_all(json_data.as_bytes())?;
+
+        self.saved = true;
 
         Ok(())
     }
@@ -174,13 +193,12 @@ impl UI {
 
         if is_pre_commanded == false {
             println!("enter address of the app");
+            stdin().read_line(&mut method_input).expect("failed to get input");
         }
 
         if(is_pre_commanded) {
             method_input = input_vec[0].clone();
         }
-
-        else { io::stdin().read_line(&mut method_input).expect("failed to get input"); }
 
         method_input = method_input.trim().to_string();
 
@@ -194,7 +212,7 @@ impl UI {
             let mut input = String::new();
             io::stdin().read_line(&mut input).expect("Failed to read line");
     }
-
+        self.saved = false;
         self.app_db.add_app(app);
     }
     pub fn reg_group(&mut self, mut input_vec : &mut Vec<String>)
@@ -222,7 +240,7 @@ impl UI {
             util::get_key();
             return;
         }
-
+        self.saved = false;
         self.defined_groups.push(method_input);
 
     }
@@ -232,16 +250,60 @@ impl UI {
 
     }
 
+    pub fn edit_app_name(&mut self, mut input_vec : Vec<String>)
+    {
+        if input_vec.is_empty() == false{
+            input_vec.remove(0);
+        }
+        let mut is_precommanded = input_vec.is_empty();
+
+        let mut method_input = String::new();
+
+        if is_precommanded == false {
+            println!("enter name of the app on the list");
+            stdin().read_line(&mut method_input).expect("failed to get app name");
+        }
+        else { method_input = input_vec[0].clone(); }
+
+        method_input = method_input.trim().to_string();
+
+        let index = self.app_db.clone().search_name(method_input.clone()) as usize;
+
+        if index == usize::MAX{
+            println!("app not found");
+            util::get_key();
+            return;
+        }
+
+        if input_vec.is_empty() == false{
+            input_vec.remove(0);
+        }
+        is_precommanded = input_vec.is_empty();
+
+
+        if is_precommanded == false {
+            println!("enter the new app name");
+            stdin().read_line(&mut method_input).expect("failed to get new app name");
+        }
+        else{
+            method_input = input_vec[0].clone();
+        }
+
+        self.saved = false;
+        self.app_db.set_app_name_index(index , method_input);
+
+    }
+
     pub fn group_app(&mut self)
     {
         let mut app_input = Vec::<String>::new();
         let mut method_input = String::new();
         let mut group_input = Vec::<String>::new();
-        println!("enter name of apps you want to group seperated by space");
+        println!("enter name of apps you want to group seperated by |");
 
         io::stdin().read_line(&mut method_input).expect("failed to get list of app names");
 
-        app_input = method_input.split(' ').map(|s| s.to_string()).collect();
+        app_input = method_input.split('|').map(|s| s.to_string()).collect();
 
         if self.app_list_validator(app_input.clone()) == false
         {
@@ -265,7 +327,7 @@ impl UI {
             util::get_key();
             return
         }
-
+        self.saved = false;
         self.app_db.add_group(app_input, group_input);
 
     }
@@ -288,12 +350,95 @@ impl UI {
         }
         true
     }
-    pub fn del_app(&mut self)
+
+    pub fn dels(&mut self , mut input_vec : Vec<String>)
     {
-        println!("del app called!");
+        if input_vec.is_empty(){return;}
+        input_vec.remove(0);
+
+        match input_vec[0].trim()
+        {
+            "app" => self.del_app(input_vec),
+            "group" => self.del_group(input_vec),
+            _ => return,
+        }
     }
 
+    pub fn del_app(&mut self, mut input_vec : Vec<String>)
+    {
+        let mut method_input= String::new();
+        if input_vec.is_empty() == false {
+            input_vec.remove(0);
+        }
 
+        let is_pre_commanded = input_vec.is_empty() == false;
+
+        if is_pre_commanded == false {
+            println!("enter name of the app");
+        }
+
+        if is_pre_commanded {
+            method_input = input_vec[0].clone();
+        }
+
+        else { io::stdin().read_line(&mut method_input).expect("failed to get input"); }
+
+        method_input = method_input.trim().to_string();
+
+
+        if self.clone().app_db.exists_name(method_input.clone()) == false{
+            println!("app doesnt exists");
+
+            println!("Press Enter to continue...");
+            let mut input = String::new();
+            io::stdin().read_line(&mut input).expect("Failed to read line");
+        }
+        self.saved = false;
+        self.app_db.remove_app_name(method_input);
+    }
+
+    pub fn del_group(&mut self, mut input_vec : Vec<String>)
+    {
+        let mut method_input = "".to_string();
+
+        if input_vec.is_empty() == false {
+            input_vec.remove(0);
+        }
+        let is_precommanded = input_vec.is_empty() == false;
+
+        if is_precommanded == false{
+            println!("enter name of group you want to delete");
+            io::stdin().read_line(&mut method_input).expect("failed to get input");
+        }
+
+        else{
+            method_input = input_vec[0].clone();
+        }
+
+        method_input = method_input.trim().to_string();
+
+        if self.defined_groups.contains(&method_input.trim().to_string()) == false {
+            println!("group doesnt exists");
+            util::get_key();
+            return;
+        }
+        self.saved = false;
+
+        let index = self.defined_groups.iter().position(|x| x.eq(&method_input)).expect("group not found");
+
+        self.app_db.remove_groups(vec![method_input]);
+        self.defined_groups.remove(index);
+    }
+    pub fn help() {
+        println!("enter number of the app or a group to restart them \n
+        you can enter number of apps and their group separated by spaces to restart them in a sequence\n
+        reg [app/group] \n
+        del [app/group] \n
+        group [apps] \n
+        save \n
+        quit \n");
+        util::get_key();
+    }
 }
 
 
