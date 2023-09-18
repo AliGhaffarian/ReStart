@@ -15,7 +15,7 @@ struct UserPrefrence
     app_msg: bool,
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Default)]
 pub struct App
 {
     name: String,
@@ -47,6 +47,11 @@ impl App
         self.name = App::extract_name(self.address.clone());
     }
 
+    pub fn set_name_by_input(&mut self, input : String)
+    {
+        self.name = input;
+    }
+
     pub fn exists_group(self, group: String) -> bool
     {
         for group_in_self in self.groups
@@ -62,8 +67,9 @@ impl App
     pub fn add_groups(&mut self, groups: Vec<String>) -> i32
     {
         let mut failed_pushes = 0;
-        for group in groups
+        for mut group in groups
         {
+            group = group.trim().to_string();
             if self.to_owned().exists_group(group.clone()) {
                 failed_pushes += 1
             } else {
@@ -72,8 +78,9 @@ impl App
         }
         return failed_pushes;
     }
-    pub fn add_group(&mut self, group: String) -> bool
+    pub fn add_group(&mut self, mut group: String) -> bool
     {
+        group = group.trim().to_string();
         if self.to_owned().exists_group(group.clone()) { return false; }
 
         self.groups.push(group.clone());
@@ -84,7 +91,8 @@ impl App
     pub fn rem_groups(&mut self, groups: Vec<String>) -> i32 {
         let mut failed_removes = 0;
 
-        for group in groups {
+        for mut group in groups {
+            group = group.trim().to_string();
             if self.clone().exists_group(group.clone()) {
                 let index = self.groups.iter().position(|n| n.eq(&group));
                 self.groups.remove(index.unwrap());
@@ -94,7 +102,10 @@ impl App
         failed_removes
     }
     //true if deletes
-    pub fn rem_group(&mut self, group: String) -> bool {
+    pub fn rem_group(&mut self, mut group: String) -> bool {
+
+        group = group.trim().to_string();
+
         if self.clone().exists_group(group.clone()) {
             let index = self.groups.iter().position(|n| n.eq(&group));
             self.groups.remove(index.unwrap());
@@ -107,8 +118,9 @@ impl App
     {
         self.groups.clear();
     }
-    pub fn set_address(&mut self, address: String)
+    pub fn set_address(&mut self, mut address: String)
     {
+        address = address.trim().to_string();
         self.address = address.clone();
         self.name = App::extract_name(address);
     }
