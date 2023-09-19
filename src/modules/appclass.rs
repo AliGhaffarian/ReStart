@@ -49,6 +49,7 @@ impl App
 
     pub fn set_name_by_input(&mut self, input : String)
     {
+        self.name.clear();
         self.name = input;
     }
 

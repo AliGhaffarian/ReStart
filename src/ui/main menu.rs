@@ -138,11 +138,22 @@ impl UI {
             "del" => self.dels(input_vec),
             "group" => self.group_app(),
             "print" => self.prints(input_vec),
+            "edit" => self.edits(input_vec),
             _ =>return false,
         }
         true
     }
 
+    pub fn edits(&mut self, mut input_vec : Vec<String>)
+    {
+        if input_vec.is_empty(){return}
+        input_vec.remove(0);
+        match input_vec[0].trim(){
+            "app" => self.edit_app_name(input_vec),
+            "group" => self.edit_group(input_vec),
+            _ => return,
+        }
+    }
     pub fn quit(&mut self)
     {
         if self.saved == false
@@ -266,7 +277,7 @@ impl UI {
         if input_vec.is_empty() == false{
             input_vec.remove(0);
         }
-        let mut is_precommanded = input_vec.is_empty();
+        let mut is_precommanded = input_vec.is_empty() == false;
 
         let mut method_input = String::new();
 
@@ -289,8 +300,9 @@ impl UI {
         if input_vec.is_empty() == false{
             input_vec.remove(0);
         }
-        is_precommanded = input_vec.is_empty();
+        is_precommanded = input_vec.is_empty() == false;
 
+        method_input.clear();
 
         if is_precommanded == false {
             println!("enter the new app name");
@@ -299,6 +311,8 @@ impl UI {
         else{
             method_input = input_vec[0].clone();
         }
+
+        method_input = method_input.trim().to_string();
 
         self.saved = false;
         self.app_db.set_app_name_index(index , method_input);
@@ -445,7 +459,8 @@ impl UI {
         you can enter number of apps and their group separated by spaces to restart them in a sequence\n
         reg [app/group] \n
         del [app/group] \n
-        group [apps] \n
+        group [apps] \
+        edit [apps]\n
         save \n
         quit \n");
         util::get_key();
