@@ -41,10 +41,12 @@ impl UI {
 
         print_string = app.clone().get_name();
 
+        print_string = format!("{} \t", print_string);
+
         if groups_included{
             for group in app.get_groups()
             {
-                print_string = format!("{} {}", print_string, group)
+                print_string = format!("{}  {}", print_string, group)
             }
         }
 
