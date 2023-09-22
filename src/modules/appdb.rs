@@ -6,9 +6,11 @@ use std::io::Read;
 use std::io::Write;
 use serde_json;
 
+#[path = "..\\ui\\utilities.rs"] mod utilities;
+use utilities::util;
 pub mod appclass;
 use appclass::App;
-use crate::appclass::utilities::util;
+use appclass::LaunchInfo;
 
 #[derive(Serialize, Deserialize, Clone, Default)]
 pub struct AppDB
@@ -25,69 +27,94 @@ impl AppDB
             apps : Vec::<App>::new(),
         }
     }
-    pub fn add_app(&mut self, app : App)
+    pub fn add_app(&mut self, app : &App)
     {
-        if self.clone().exists_name(app.clone().get_name()) == false {self.apps.push(app);}
+        if self.exists_name(&app.get_process_name()) == false {self.apps.push(app.clone());}
     }
 
-    pub fn set_app_name_index(&mut self, index : usize , input : String)
+    pub fn can_run_index(&mut self, index : usize)->bool
     {
-        if index >= self.len(){return}
+        match self.is_index_inbound(index){
 
-        self.apps[index].set_name_by_input(input);
-    }
+            true => self.apps[index].get_launch_info() != LaunchInfo::CantLaunch,
+            false => false,
 
-    pub fn exists(self, app : App)->bool
-    {
-        let app_name = app.get_name();
-
-        for one_app in self.apps
-        {
-            if one_app.clone().get_name().eq(&app_name)
-            {return true;}
         }
-        false
+    }
+    pub fn set_app_launch_info_index(&mut self, index : usize , launch_info : LaunchInfo)->bool
+    {
+        return match self.is_index_inbound(index) {
+            true => self.apps[index].set_launch_info(launch_info),
+            false => false,
+        }
+    }
+    pub fn set_app_alias_index(&mut self, index : usize , input : &String)->bool {
+        return match self.is_index_inbound(index) {
+            true => {
+                self.apps[index].set_alias(input.clone());
+                true
+            },
+            false => false,
+        }
     }
 
-    pub fn exists_name(self, mut name : String)->bool
-    {
-        name = name.trim().to_string();
-        for app in self.apps
-        {
-            if app.clone().get_name().eq(name.clone().as_str())
-            {return true;}
+    pub fn set_app_process_name_index(&mut self, index : usize , input : &String)->bool {
+        return match self.is_index_inbound(index) {
+            true => {
+                self.apps[index].set_process_name(input.clone());
+                true
+            },
+            false => false,
         }
-        false
+    }
+    pub fn set_app_launch_info_process_name(&mut self, process_name : &String, launch_info : LaunchInfo)->bool{
+        return match self.search_process_name(process_name){
+            index => self.apps[index].set_launch_info(launch_info),
+            usize::MAX => false
+        }
+    }
+    pub fn reset_app_launch_info_process_name(&mut self, process_name : &String){
+
+        return match self.search_process_name(process_name){
+            index => {
+                self.apps[index].reset_launch_info();
+            },
+            usize::MAX => return,
+        }
+
+    }
+    pub fn get_app_launch_info_process_name(&mut self, process_name : &String)->Option<LaunchInfo>{
+        return match self.search_process_name(process_name) {
+            index => Some(self.apps[index].get_launch_info()),
+            usize::MAX => None,
+        }
+    }
+
+    pub fn exists(&self, app : &App)->bool
+    {
+        self.exists_name(&app.get_process_name())
+    }
+
+    pub fn exists_name(&self, name : &String)->bool
+    {
+        self.search_process_name(name) != usize::MAX
     }
 
     //not done
-    pub fn search(self, app : App)->usize
+    pub fn search(&self, app : &App)->usize
     {
-        for i in 0..= self.clone().len()
-        {
-            match self.clone().get_app(i){
-                None => panic!(),
+        self.search_process_name(&app.get_process_name())
+    }
+    pub fn search_process_name(&self, name : &String) -> usize
+    {
+        let to_lower_name = name.trim().to_lowercase().to_string();
 
-                Some(an_app)=>{
-                    if an_app.get_name().trim()
-                        .eq(app.clone().get_name().as_str())
-                            {return i;}
-                }
+        for i in  0..=self.len() - 1{
+            if self.apps[i].get_process_name().eq(&to_lower_name){
+                return i
             }
         }
         usize::MAX
-    }
-    pub fn search_name(self, mut name : String)->i32
-    {
-        name = name.trim().to_string();
-        if self.clone().exists_name(name.clone()) == false{return -1;}
-
-        for i in 0..=self.apps.len()
-        {
-            if name.clone().eq(self.apps[i as usize].clone().get_name().as_str()){ return i as i32;}
-        }
-
-        -1
     }
 
 
@@ -95,32 +122,41 @@ impl AppDB
     {
         self.apps.len()
     }
-    pub fn get_app(self, index : usize)->Option<App>
+    pub fn get_app(&self, index : usize)->Option<App>
     {
-        if self.clone().is_index_inbound(index) {return None;}
-
-        Some(self.clone().apps[index].clone())
+        return match self.is_index_inbound(index) {
+            true => Some(self.apps[index].clone()),
+            false =>None,
+        }
     }
 
 
-    pub fn is_index_inbound(self, index : usize)->bool
+    pub fn is_index_inbound(&self, index : usize)->bool
     {
-        (index < 0 || index >= self.clone().len())
+        index < self.len()
     }
-    pub fn app_name_action(&mut self, mut app_name: String, action: &str) {
+    pub fn app_name_action(&mut self, app_process_name: &String, action: &str)->bool {
 
-        app_name = app_name.trim().to_string();
-
-        let index = self.clone().search_name(app_name) as usize;
-
-        self.app_index_action(index, action);
+        return match self.search_process_name(app_process_name){
+            index =>{
+                self.app_index_action(index, action);
+                true
+            },
+            usize::MAX => false,
+        }
     }
-    pub fn app_index_action(&mut self, index : usize, action : &str)
+    pub fn app_index_action(&mut self, index : usize, action : &str)->bool
     {
-        self.apps[index].action(action);
+        return match self.is_index_inbound(index){
+            true => {
+                self.apps[index].action(action);
+                true
+            },
+            false => false
+        }
     }
 
-    pub fn app_group_action(&mut self, groups : Vec<String>, action : &str)
+    pub fn app_group_action(&mut self, groups : &Vec<String>, action : &str)
     {
         let lookup_result = self.groups_lookup(groups);
 
@@ -130,12 +166,12 @@ impl AppDB
         }
     }
 
-    pub fn groups_lookup(&self, groups : Vec<String>)->Vec<usize>
+    pub fn groups_lookup(&self, groups : &Vec<String>)->Vec<usize>
     {
         let mut result = Vec::<usize>::new();
 
-        for group in &groups {
-            let indexes = self.group_lookup(group.clone());
+        for group in groups {
+            let indexes = self.group_lookup(group);
 
             // Iterate through the indexes and add them to result if they haven't been added already
             for &index in &indexes {
@@ -144,49 +180,44 @@ impl AppDB
                 }
             }
         }
-
         result
     }
 
-    pub fn group_lookup(&self, mut group : String)->Vec<usize>
+    pub fn group_lookup(&self, group : &String)->Vec<usize>
     {
-        group = group.trim().to_string();
-
         let mut result = Vec::<usize>::new();
         for i   in 0..=self.len() -1
         {
-            if self.apps[i].clone().get_groups().contains(&group) {
-                result.push(i );
-            }
+            if self.apps[i].exists_group(&group){result.push(i)};
         }
         result
     }
 
-    pub fn remove_app(&mut self, app : App)
+    pub fn remove_app(&mut self, app : &App)->bool
     {
-        let index = self.clone().search(app);
+        return match self.search(&app) {
+            usize::MAX => false,
 
-        if index == usize::MAX
-        {
-            return;
+            index => {
+                self.apps.remove(index);
+                true
+            },
         }
-        self.apps.remove(index );
     }
 
-    pub fn remove_app_name(&mut self, mut name : String)
+    pub fn remove_app_name(&mut self, app_process_name : &String)->bool
     {
-        name = name.trim().to_string();
+        return match self.search_process_name(app_process_name) {
+            usize::MAX => false,
 
-        let index = self.clone().search_name(name) as usize;
-
-        if index == usize::MAX
-        {
-            return;
+            index => {
+                self.apps.remove(index);
+                true
+            },
         }
-        self.apps.remove(index);
     }
 
-    pub fn remove_app_groups(&mut self, groups : Vec<String>)
+    pub fn remove_app_groups(&mut self, groups : &Vec<String>)
     {
         let indexes = self.groups_lookup(groups);
 
@@ -196,13 +227,13 @@ impl AppDB
         }
     }
 
-    pub fn remove_groups(&mut self, groups : Vec<String>)
+    pub fn remove_groups(&mut self, groups : &Vec<String>)
     {
-        let indexes = self.groups_lookup(groups.clone());
+        let indexes = self.groups_lookup(groups);
 
         for i in indexes
         {
-            self.apps[i as usize].rem_groups(groups.clone());
+            self.apps[i].rem_groups(groups.clone());
         }
     }
 
@@ -225,17 +256,21 @@ impl AppDB
         Ok(app_db)
     }
 
-    pub fn add_group(&mut self, apps : Vec<String>, groups : Vec<String>)
+    pub fn add_group(&mut self, apps : &Vec<String>, groups : &Vec<String>)
     {
         for app in apps
         {
-            let index = self.clone().search_name(app.clone().trim().to_string()) as usize;
-            if index == usize::MAX {
-                println!("app {} not found", app);
-                util::get_key();
-                return;
+            match self.search_process_name(app){
+                index =>{
+                    self.apps[index].add_groups(groups.clone());
+                    return
+                },
+                usize::MAX =>{
+                    println!("app {} not found", app);
+                    util::get_key();
+                    return
+                },
             }
-            self.apps[index].add_groups(groups.clone());
         }
     }
 }
