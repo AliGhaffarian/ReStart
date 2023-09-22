@@ -69,24 +69,27 @@ impl AppDB
     }
     pub fn set_app_launch_info_process_name(&mut self, process_name : &String, launch_info : LaunchInfo)->bool{
         return match self.search_process_name(process_name){
+            usize::MAX => false,
             index => self.apps[index].set_launch_info(launch_info),
-            usize::MAX => false
         }
     }
     pub fn reset_app_launch_info_process_name(&mut self, process_name : &String){
 
         return match self.search_process_name(process_name){
+
+            usize::MAX => return,
+
             index => {
                 self.apps[index].reset_launch_info();
             },
-            usize::MAX => return,
+
         }
 
     }
     pub fn get_app_launch_info_process_name(&mut self, process_name : &String)->Option<LaunchInfo>{
         return match self.search_process_name(process_name) {
-            index => Some(self.apps[index].get_launch_info()),
             usize::MAX => None,
+            index => Some(self.apps[index].get_launch_info()),
         }
     }
 
@@ -138,11 +141,14 @@ impl AppDB
     pub fn app_name_action(&mut self, app_process_name: &String, action: &str)->bool {
 
         return match self.search_process_name(app_process_name){
+
+            usize::MAX => false,
+
             index =>{
                 self.app_index_action(index, action);
                 true
             },
-            usize::MAX => false,
+
         }
     }
     pub fn app_index_action(&mut self, index : usize, action : &str)->bool
@@ -261,15 +267,18 @@ impl AppDB
         for app in apps
         {
             match self.search_process_name(app){
-                index =>{
-                    self.apps[index].add_groups(groups.clone());
-                    return
-                },
+
                 usize::MAX =>{
                     println!("app {} not found", app);
                     util::get_key();
                     return
                 },
+
+                index =>{
+                    self.apps[index].add_groups(groups.clone());
+                    return
+                },
+
             }
         }
     }
