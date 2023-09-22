@@ -7,7 +7,7 @@ use std::io::Read;
 use std::io::Write;
 #[path = "..\\ui\\utilities.rs"] pub mod utilities;
 use utilities::util;
-use crate::appclass::LaunchInfo::CantLaunch;
+
 
 //need to get operating system
 struct UserPrefrence
@@ -85,6 +85,21 @@ impl Names {
         }
         failed_removes
     }
+
+    //true if deletes
+    pub fn rem(&mut self, mut name: String) -> bool {
+
+        name = name.trim().to_lowercase();
+
+        return match self.search(&name) {
+            usize::MAX => false,
+            index => {
+                self.names.remove(index);
+                true
+            },
+        };
+    }
+
     pub fn search(&self, name: &String) ->usize
     {
         let to_lower_name = name.trim().to_lowercase();
@@ -95,16 +110,6 @@ impl Names {
         }
     }
 
-    //true if deletes
-    pub fn rem(&mut self, name: String) -> bool {
-        return match self.search(&name) {
-            usize::MAX => false,
-            index => {
-                self.names.remove(index);
-                true
-            },
-        };
-    }
     pub fn searches(&self, names: Vec<String>) ->Vec<usize>
     {
         let mut result = Vec::<usize>::new();
@@ -129,18 +134,13 @@ impl Names {
         self.names.clone()
     }
 
-    pub fn get(&self, index : &usize)->String
+    pub fn get(&self, index : &usize)->Option<String>
     {
-        if *index < self.names.len()
-        {
-            return self.names[*index].clone();
+        return match *index < self.names.len() {
+            true => Some(self.names[*index].clone()),
+            false => None,
         }
-
-        String::new()
     }
-
-
-
 }
 
 
@@ -166,13 +166,13 @@ pub enum LaunchInfo
 impl LaunchInfo{
     pub fn reset(&mut self)
     {
-        *self = CantLaunch
+        *self = LaunchInfo::CantLaunch
     }
     pub fn set(&mut self, launch_info: LaunchInfo)->bool
     {
         match self
         {
-            CantLaunch => {
+            LaunchInfo::CantLaunch => {
                 *self = launch_info;
                 return true;
             },
@@ -197,20 +197,21 @@ pub struct App
 
 impl App
 {
-    pub fn new(launch_info : LaunchInfo, process_name : String, alias : Option<String>) -> Self
+    pub fn new( input_launch_info : LaunchInfo, mut input_process_name : String, mut input_alias : Option<String>) -> Self
     {
         Self
         {
-            alias,
-            process_name,
-            launch_info,
+            alias : input_alias,
+            process_name : input_process_name,
+            launch_info : input_launch_info,
             groups: Names::new(),
         }
     }
 
-
-    pub fn set_alias(&mut self, input : String)
+    pub fn set_alias(&mut self, mut input : String)
     {
+        input = input.trim().to_lowercase();
+
         match &mut self.alias
         {
             Some(alias)=>alias.clear(),
@@ -227,7 +228,7 @@ impl App
     // sets name property using get_name
     pub fn set_process_name(&mut self, process_name : String)
     {
-        self.process_name = process_name
+        self.process_name = process_name.trim().to_lowercase()
     }
     pub fn get_process_name(& self)->String{
         self.process_name.clone()
@@ -240,9 +241,9 @@ impl App
     {
         self.launch_info.set(launch_info)
     }
-    pub fn get_launch_info(self)->LaunchInfo
+    pub fn get_launch_info(&self)->LaunchInfo
     {
-        self.launch_info
+        self.launch_info.clone()
     }
 
     pub fn get_groups(&self)->Names
@@ -257,6 +258,14 @@ impl App
     {
         self.groups.adds(names)
     }
+    pub fn rem_groups(&mut self, names : Vec<String>)->i32 {
+        self.groups.rems(names)
+    }
+
+    pub fn rem_group(&mut self, name : String)->bool{
+        self.groups.rem(name)
+    }
+
     pub fn search_group(& self, name : &String)->usize
     {
         self.groups.search(name)
@@ -267,6 +276,8 @@ impl App
     pub fn exists_group(& self, name : &String)->bool{
         self.groups.exists(name)
     }
+
+
     pub fn run(&self)->bool
     {
         let mut binding = Command::new("cmd");
@@ -285,7 +296,7 @@ impl App
                 // Clone the command before passing it
                 command
             },
-            CantLaunch => return false,
+            LaunchInfo::CantLaunch => return false,
         };
 
         App::redirect_output(&mut command, None);
