@@ -1,5 +1,3 @@
-use std::env::args;
-use std::fs::read;
 use std::io;
 use std::string::ToString;
 use serde::{Serialize, Deserialize};
@@ -37,9 +35,11 @@ impl Names {
     }
     pub fn exists(&self, name : &String) -> bool
     {
+        let to_lower_name = name.trim().to_lowercase();
+
         for name_in_self in &self.names
         {
-            if name.eq(name_in_self) {
+            if to_lower_name.eq(&name_in_self.to_lowercase()) {
                 return true;
             }
         }
@@ -51,72 +51,72 @@ impl Names {
     {
         let mut failed_pushes = 0;
 
-        for mut name in names
+        for name in names
         {
-            name = name.trim().to_string();
-
-            if self.exists(&name) {
-                failed_pushes += 1
-            }
-            else {
-                self.names.push(name)
+            if self.add(name) == false{
+                failed_pushes += 1;
             }
         }
         return failed_pushes;
     }
     pub fn add(&mut self, mut name: String) -> bool
     {
-        name = name.trim().to_string();
+        name = name.trim().to_lowercase();
 
-        if self.exists(&name) { return false; }
+        return match self.exists(&name){
 
-        self.names.push(name);
-
-        true
+            false =>{
+                self.names.push(name);
+                true
+            },
+            true => true
+        }
     }
     //returns amount of failed removes
     pub fn rems(&mut self, names: Vec<String>) -> i32 {
 
         let mut failed_removes = 0;
 
-        for mut name in names {
+        for name in names {
 
-            name = name.trim().to_string();
-
-            if self.exists(&name) {
-
-                let index = self.search(&name);
-
-                self.names.remove(index);
-
-                failed_removes += 1;
+            if self.rem(name) == false{
+                failed_removes += 1
             }
         }
         failed_removes
     }
-    //true if deletes
-    pub fn rem(&mut self, mut name: String) -> bool {
-
-        name = name.trim().to_string();
-
-        if self.exists(&name) {
-
-            let index = self.search(&name);
-
-            self.names.remove(index);
-
-            return true;
-        }
-
-        false
-    }
-
     pub fn search(&self, name: &String) ->usize
     {
-        match self.names.iter().position(|n| n.eq(name)){
+        let to_lower_name = name.trim().to_lowercase();
+
+        match self.names.iter().position(|n| n.eq(&to_lower_name)){
             Some(index)=>return index,
             None => usize::MAX,
         }
+    }
+
+    //true if deletes
+    pub fn rem(&mut self, name: String) -> bool {
+        return match self.search(&name) {
+            usize::MAX => false,
+            index => {
+                self.names.remove(index);
+                true
+            },
+        };
+    }
+    pub fn searches(&self, names: Vec<String>) ->Vec<usize>
+    {
+        let mut result = Vec::<usize>::new();
+
+        for name in &names {
+            let index = self.search(name);
+
+            if !result.contains(&index) {
+                result.push(index);
+            }
+        }
+        result
     }
 
     pub fn clear(&mut self)
@@ -139,37 +139,8 @@ impl Names {
         String::new()
     }
 
-    pub fn lookups(&self, names: Vec<String>) ->Vec<usize>
-    {
-        let mut result = Vec::<usize>::new();
 
-        for name in &names {
-            let indexes = self.lookup(name.clone());
 
-            // Iterate through the indexes and add them to result if they haven't been added already
-            for &index in &indexes {
-                if !result.contains(&index) {
-                    result.push(index);
-                }
-            }
-        }
-
-        result
-    }
-    pub fn lookup(&self, mut name: String) ->Vec<usize>
-    {
-        name = name.trim().to_string();
-
-        let mut result = Vec::<usize>::new();
-
-        for i   in 0..=self.names.len() -1
-        {
-            if self.exists(&name) {
-                result.push(i );
-            }
-        }
-        result
-    }
 }
 
 
@@ -262,6 +233,9 @@ impl App
         self.process_name.clone()
     }
 
+    pub fn reset_launch_info(&mut self){
+        self.launch_info.reset()
+    }
     pub fn set_launch_info(&mut self, launch_info : LaunchInfo)->bool
     {
         self.launch_info.set(launch_info)
@@ -283,35 +257,41 @@ impl App
     {
         self.groups.adds(names)
     }
-    pub fn search_groups(& self, name : &String)->usize
+    pub fn search_group(& self, name : &String)->usize
     {
         self.groups.search(name)
     }
-
+    pub fn search_groups(& self, names : Vec<String>)->Vec<usize>{
+        self.groups.searches(names)
+    }
+    pub fn exists_group(& self, name : &String)->bool{
+        self.groups.exists(name)
+    }
     pub fn run(&self)->bool
     {
-        let mut command = Command::new("cmd").arg("/C");
+        let mut binding = Command::new("cmd");
+        let mut command = binding.arg("/C");
 
-        match self.launch_info.get_launch_info()
+        command = match self.launch_info.get_launch_info()
         {
             LaunchInfo::Address {address : an_address} => command.arg(an_address),
             LaunchInfo::Name { name : a_name} => command.arg(a_name),
             LaunchInfo::CustomCommand {command : a_command, args : some_args} => {
-                    command.arg(a_command);
+                command.arg(a_command);
 
-                    if !some_args.is_empty() {
-                        command.args(some_args);
-                    }
+                if !some_args.is_empty() {
+                    command.args(some_args);
+                }
+                // Clone the command before passing it
+                command
             },
             CantLaunch => return false,
-        }
+        };
 
         App::redirect_output(&mut command, None);
 
         self.command_confirm(&command.spawn(), "runn")
     }
-
-
 
 
     pub fn kill(&self)
@@ -360,7 +340,7 @@ impl App
         }
     }
 
-    fn is_app_alive(process_name: &str) -> bool {
+    pub fn is_app_alive(process_name: &str) -> bool {
         // Use the `tasklist` command on Windows to list running processes.
         let tasklist_output = Command::new("tasklist")
             .stdout(Stdio::piped())
@@ -369,8 +349,9 @@ impl App
 
         match tasklist_output {
             Ok(output) => {
-                let output_str = String::from_utf8_lossy(&output.stdout);
-                output_str.contains(process_name)
+                let output_str = String::from_utf8_lossy(&output.stdout).to_lowercase();
+                let process_name_lower = process_name.to_lowercase();
+                output_str.contains(&process_name_lower)
             }
             Err(_) => false, // Failed to run the command or read the output.
         }
