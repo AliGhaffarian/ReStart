@@ -1,20 +1,23 @@
+
+
+
+
+#[path = "modules\\appdb.rs"] mod appdb;
+use appdb::AppDB;
+
+
 #[path = "modules\\appclass.rs"] mod appclass;
 use crate::appclass::{LaunchInfo, Names};
-use crate::appclass::App;
+use appclass::App;
 
 
-//#[path = "modules\\appdb.rs"] mod appdb;
-//#[path = "ui\\main menu.rs"] mod mainmenu;
-/*use mainmenu::UI;
-use mainmenu::appdb::AppDB;
-use mainmenu::appdb::appclass::App;*/
 use std::string::ToString;
 use std::sync::Mutex;
 use serde::Deserialize;
 use std::io::{self, stdin, Write};
 use std::process::Command;
-use std::fs::File;
 use std::io::prelude::*;
+
 
 //reserved keywords : all
 static RESERVED_KEYWORDS: Mutex<Vec<&str>> = Mutex::new(Vec::new());
