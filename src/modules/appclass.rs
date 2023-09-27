@@ -1,22 +1,12 @@
+
+use std::process::Output;
 use std::io;
-use std::string::ToString;
+
 use serde::{Serialize, Deserialize};
+//use serde_json::Result;
 use std::process::{Child, Command, Stdio};
-use serde_json;
-use std::io::Read;
-use std::io::Write;
-#[path = "..\\ui\\utilities.rs"] pub mod utilities;
-use utilities::util;
 
-
-//need to get operating system
-struct UserPrefrence
-{
-    restart_error: bool,
-    restart_msg: bool,
-    app_msg: bool,
-}
-
+use crate::utilities::util;
 
 
 #[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq)]
@@ -25,7 +15,7 @@ pub struct Names
     names : Vec<String>,
 }
 
-
+#[allow(dead_code)]
 impl Names {
     pub fn new()->Self
     {
@@ -162,7 +152,7 @@ pub enum LaunchInfo
     #[default]
     CantLaunch
 }
-
+#[allow(dead_code)]
 impl LaunchInfo{
     pub fn reset(&mut self)
     {
@@ -194,10 +184,10 @@ pub struct App
     launch_info : LaunchInfo,
 }
 
-
+#[allow(dead_code)]
 impl App
 {
-    pub fn new( input_launch_info : LaunchInfo, mut input_process_name : String, mut input_alias : Option<String>) -> Self
+    pub fn new( input_launch_info : LaunchInfo,  input_process_name : String,  input_alias : Option<String>) -> Self
     {
         Self
         {
@@ -278,8 +268,8 @@ impl App
     }
 
 
-    pub fn run(&self)->bool
-    {
+    pub fn run_windows(&self)->bool{
+
         let mut binding = Command::new("cmd");
         let mut command = binding.arg("/C");
 
@@ -303,11 +293,43 @@ impl App
 
         self.command_confirm(&command.spawn(), "runn")
     }
+    pub fn run_linux(&self)->bool{
 
+        let mut command : Command;
 
-    pub fn kill(&self)
-    {
+        command = match self.launch_info.get_launch_info()
+        {
+            LaunchInfo::Address {address : an_address} => Command::new(an_address),
+            LaunchInfo::Name { name : a_name} => Command::new(a_name),
+            LaunchInfo::CustomCommand {command : a_command, args : some_args} => {
+                
+                let mut a_command = Command::new(a_command);
 
+                if !some_args.is_empty() {
+                    a_command.args(some_args);
+                }
+                // Clone the command before passing it
+                a_command
+            },
+            LaunchInfo::CantLaunch => return false,
+        };
+
+        App::redirect_output(&mut command, None);
+
+        self.command_confirm(&command.spawn(), "runn")
+    }
+
+    pub fn run(&self)->bool
+    {    
+        #[cfg(target_os = "linux")]{
+            self.run_linux()
+        }
+        #[cfg(target_os = "windows")]{
+            self.run_windows
+        }
+    }
+
+    pub fn kill_windwos(&self){
         let command : &mut Command = &mut Command::new("taskkill");
 
         command.arg("/F");
@@ -321,6 +343,47 @@ impl App
         self.command_confirm(&child, "kill");
 
         let _ = child.expect("").wait();
+    }
+
+    pub fn get_pid(&self)->Option<String> {
+
+        return match Command::new("pgrep").arg(self.process_name.clone()).output(){
+            Ok(output)=>{
+                Some(String::from_utf8(output.stdout).unwrap())
+            },
+            Error => None,
+        }
+    }
+
+    pub fn kill_linux(&self){
+
+        let mut binding = Command::new("kill");
+        let mut command =binding.arg("-TERM");
+
+        match self.get_pid(){
+            Some(pid)=> command = command.arg(pid.trim()),
+            None => return
+        }
+
+        //App::redirect_output(command, None);
+
+        let child = command.spawn();
+
+        self.command_confirm(&child, "kill");
+
+        let _ = child.expect("").wait();
+
+    }
+
+    pub fn kill(&self)
+    {
+
+        #[cfg(target_os = "linux")]{
+            self.kill_linux()
+        }
+        #[cfg(target_os = "windows")]{
+            self.kill_windows
+        }
 
     }
 
@@ -335,23 +398,23 @@ impl App
 
     pub fn action(&mut self, action : &str)->bool
     {
-        match action
+        return match action
         {
             "kill" => {
                 self.kill();
-                return true;},
+                true},
             "run" => {
                 self.run();
-                return true;},
+                true},
             "restart" => {
                 self.restart();
-                return true;
+                true
             },
-            _ => return false,
+            _ => false,
         }
     }
 
-    pub fn is_app_alive(process_name: &str) -> bool {
+    pub fn is_app_alive_windows(process_name : &str) -> bool{
         // Use the `tasklist` command on Windows to list running processes.
         let tasklist_output = Command::new("tasklist")
             .stdout(Stdio::piped())
@@ -365,6 +428,27 @@ impl App
                 output_str.contains(&process_name_lower)
             }
             Err(_) => false, // Failed to run the command or read the output.
+        }
+    }
+    pub fn is_app_alive_linux(process_name : &str) -> bool{
+        
+        let output = Command::new("pgrep")
+            .arg(process_name)
+            .output()
+            .expect("Failed to execute pgrep");
+        
+        
+
+        output.status.success()
+    }
+
+
+    pub fn is_app_alive(process_name: &str) -> bool {
+        #[cfg(target_os = "windows")]{
+            Self::is_app_alive_windows(process_name)
+        }
+        #[cfg(target_os = "linux")]{
+            Self::is_app_alive_linux(process_name)
         }
     }
     fn command_confirm(&self, child : &io::Result<Child>, action : &str)->bool
