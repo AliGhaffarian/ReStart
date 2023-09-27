@@ -1,9 +1,15 @@
 use std::io;
+
+
 pub struct util{}
+
 impl util
 {
     pub fn is_all_digits(input: & String) -> bool {
         let trimmed_input = input.trim();
+
+        if trimmed_input.len() == 0 {return false}
+
         trimmed_input.chars().all(|c| c.is_digit(10))
     }
     pub fn get_key() {
