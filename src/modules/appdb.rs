@@ -1,4 +1,5 @@
-use std::ops::Index;
+
+
 use std::string::ToString;
 use serde::{Serialize, Deserialize};
 use std::fs::File;
@@ -6,18 +7,17 @@ use std::io::Read;
 use std::io::Write;
 use serde_json;
 
-#[path = "..\\ui\\utilities.rs"] mod utilities;
-use utilities::util;
-pub mod appclass;
-use appclass::App;
-use appclass::LaunchInfo;
+
+use crate::utilities::util;
+
+use crate::appclass::App;
+use crate::appclass::LaunchInfo;
 
 #[derive(Serialize, Deserialize, Clone, Default)]
 pub struct AppDB
 {
     apps : Vec<App>,
 }
-
 
 impl AppDB
 {
@@ -112,11 +112,14 @@ impl AppDB
     {
         let to_lower_name = name.trim().to_lowercase().to_string();
 
+        if self.len() == 0{return usize::MAX}
+
         for i in  0..=self.len() - 1{
             if self.apps[i].get_process_name().eq(&to_lower_name){
                 return i
             }
         }
+        
         usize::MAX
     }
 
