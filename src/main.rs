@@ -1,20 +1,27 @@
-#[path = "modules\\appclass.rs"] mod appclass;
-#[path = "modules\\appdb.rs"] mod appdb;
-#[path = "ui\\main menu.rs"] mod mainmenu;
-use mainmenu::UI;
-use mainmenu::appdb::AppDB;
-use mainmenu::appdb::appclass::App;
-use std::string::ToString;
-use std::sync::Mutex;
-use serde::Deserialize;
+
+#[path = "ui/main menu.rs"] mod main_menu;
+use main_menu::UI;
+
+
+#[path = "modules/appdb.rs"] mod appdb;
+use appdb::AppDB;
+
+
+#[path = "modules/appclass.rs"] mod appclass;
+use crate::appclass::{LaunchInfo, Names};
+use appclass::App;
+
+#[path = "ui/utilities.rs"] mod utilities;
+
+
 use std::io::{self, stdin, Write};
 use std::process::Command;
+
 use std::fs::File;
-use std::io::prelude::*;
+use crate::utilities::util;
 
-//reserved keywords : all
-static RESERVED_KEYWORDS: Mutex<Vec<&str>> = Mutex::new(Vec::new());
 
+#[allow(dead_code)]
 fn clear_console() {
     if cfg!(target_os = "windows") {
         // On Windows, use the "cls" command to clear the console.
@@ -25,9 +32,13 @@ fn clear_console() {
         io::stdout().flush().unwrap();
     }
 }
-//group apps method
-fn main() {
-    let mut ui;
+
+
+
+
+    fn main() {
+
+        let mut ui;
     match UI::load_from_json("files and groups.json") {
         Ok(some_ui) => {
             ui = some_ui;
@@ -40,7 +51,8 @@ fn main() {
 
     loop {
         ui.main_menu();
+
         clear_console();
     }
 
-}
+    }
