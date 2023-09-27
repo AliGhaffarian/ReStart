@@ -15,7 +15,7 @@ pub struct Names
     names : Vec<String>,
 }
 
-#[allow(dead_code)]
+
 impl Names {
     pub fn new()->Self
     {
@@ -54,7 +54,6 @@ impl Names {
         name = name.trim().to_lowercase();
 
         return match self.exists(&name){
-
             false =>{
                 self.names.push(name);
                 true
@@ -152,7 +151,7 @@ pub enum LaunchInfo
     #[default]
     CantLaunch
 }
-#[allow(dead_code)]
+
 impl LaunchInfo{
     pub fn reset(&mut self)
     {
@@ -184,7 +183,7 @@ pub struct App
     launch_info : LaunchInfo,
 }
 
-#[allow(dead_code)]
+
 impl App
 {
     pub fn new( input_launch_info : LaunchInfo,  input_process_name : String,  input_alias : Option<String>) -> Self
