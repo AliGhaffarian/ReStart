@@ -1,27 +1,27 @@
 
+#[path = "ui/main menu.rs"] mod main_menu;
+use main_menu::UI;
 
 
-
-#[path = "modules\\appdb.rs"] mod appdb;
+#[path = "modules/appdb.rs"] mod appdb;
 use appdb::AppDB;
 
 
-#[path = "modules\\appclass.rs"] mod appclass;
+#[path = "modules/appclass.rs"] mod appclass;
 use crate::appclass::{LaunchInfo, Names};
 use appclass::App;
 
+#[path = "ui/utilities.rs"] mod utilities;
 
-use std::string::ToString;
-use std::sync::Mutex;
-use serde::Deserialize;
+
 use std::io::{self, stdin, Write};
 use std::process::Command;
-use std::io::prelude::*;
+
+use std::fs::File;
+use crate::utilities::util;
 
 
-//reserved keywords : all
-static RESERVED_KEYWORDS: Mutex<Vec<&str>> = Mutex::new(Vec::new());
-
+#[allow(dead_code)]
 fn clear_console() {
     if cfg!(target_os = "windows") {
         // On Windows, use the "cls" command to clear the console.
@@ -35,20 +35,24 @@ fn clear_console() {
 
 
 
+
     fn main() {
 
-        let mut spotify_protocol = LaunchInfo::Name { name : String::from("spotify")};
-
-        let mut spotify_groups = Vec::<String>::new();
-
-        spotify_groups= vec![String::from("music"), String::from("music"), String::from("app"), String::from("music"), String::from("some")];
-
-        let mut spotify = App::new(spotify_protocol, "spotify.exe".to_string(), None);
-
-        spotify.add_groups(spotify_groups);
-
-        for index in spotify.search_groups(vec!["muSic".to_string(), "somE".to_string()] ){
-            println!("{}", index);
+        let mut ui;
+    match UI::load_from_json("files and groups.json") {
+        Ok(some_ui) => {
+            ui = some_ui;
         }
+        Err(_) => {
+            File::create("files and groups.json").expect("Failed to create file");
+            ui = UI::new();
+        }
+    }
+
+    loop {
+        ui.main_menu();
+
+        clear_console();
+    }
 
     }
