@@ -279,9 +279,7 @@ impl AppDB
 
                 index =>{
                     self.apps[index].add_groups(groups.clone());
-                    return
                 },
-
             }
         }
     }
