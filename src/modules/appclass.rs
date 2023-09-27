@@ -324,11 +324,11 @@ impl App
             self.run_linux()
         }
         #[cfg(target_os = "windows")]{
-            self.run_windows
+            self.run_windows()
         }
     }
 
-    pub fn kill_windwos(&self){
+    pub fn kill_windows(&self){
         let command : &mut Command = &mut Command::new("taskkill");
 
         command.arg("/F");
@@ -381,7 +381,7 @@ impl App
             self.kill_linux()
         }
         #[cfg(target_os = "windows")]{
-            self.kill_windows
+            self.kill_windows()
         }
 
     }
