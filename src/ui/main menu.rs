@@ -32,7 +32,7 @@ pub struct UI
 }
 
 impl UI {
-    
+
     pub fn new()->Self
     {
         Self{
@@ -235,7 +235,7 @@ impl UI {
 
     pub fn input_launch_info()->Option<LaunchInfo>{
         println!("provide one of these launch methods:\n1_app's address\n2_app's name(not guaranteed to work\n3_custom command");
-    
+
         let mut num_input = String::new();
         let mut launch_info_input = String::new();
 
@@ -258,6 +258,8 @@ impl UI {
                 stdin().read_line(&mut launch_info_input).expect("failed get command");
                 let input_command = launch_info_input.clone();
 
+                launch_info_input.clear();
+
                 println!("enter args");
                 stdin().read_line(&mut launch_info_input).expect("failed get args");
                 let input_args : Vec<String>= launch_info_input.split(' ').map(|s| s.trim().to_string()).collect();
@@ -265,7 +267,7 @@ impl UI {
             }
             _=>None
         }
-            
+
     }
 
     pub fn input_alias()->Option<String>{
@@ -273,7 +275,7 @@ impl UI {
         println!("[optional]enter an alias for your app (it will be used to display in the app list)");
         let mut input = String::new();
         stdin().read_line(&mut input).expect("failed get alias");
-        input = input.trim().to_string();
+        input = input.to_lowercase().trim().to_string();
         return match input.len(){
             0=>None,
             _=>Some(input)
@@ -285,7 +287,7 @@ impl UI {
 
         stdin().read_line(&mut input).expect("failed get process name");
 
-        input = input.trim().to_string();
+        input = input.to_lowercase().trim().to_string();
 
         return match input.len(){
             0=>None,
@@ -353,14 +355,14 @@ impl UI {
             Some(an_alias) => alias = Some(an_alias),
             None => alias = None
         }
-        
-        
+
+
 
         let app = App::new(launch_info, process_name, alias);
         self.app_db.add_app(&app);
 
         true
-        
+
 
     }
 
@@ -370,7 +372,7 @@ impl UI {
     }
 
     pub fn print_all_process_names(& self){
-        
+
     }
 
     pub fn edit_app_alias(&mut self, mut input_vec : Vec<String>)
