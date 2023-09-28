@@ -307,7 +307,7 @@ impl UI {
 
 
     pub fn input_launch_info()->Option<LaunchInfo>{
-        println!("provide one of these launch methods:\n1_app's address\n2_app's name(not guaranteed to work)\n3_custom command");
+        println!("provide one of these launch methods:\n1_app's address(not tested on linux)\n2_app's name(not guaranteed to work)\n3_custom command");
 
         let mut num_input = String::new();
         let mut launch_info_input = String::new();
@@ -415,7 +415,7 @@ impl UI {
 
         match self.app_db.exists_name(&process_name){
             true =>{
-                println!("app aleady exists");
+                println!("app already exists");
                 util::get_key();
                 return false;
             }
@@ -501,7 +501,7 @@ impl UI {
         let app_input : Vec<String>;
         let mut method_input = String::new();
         let group_input;
-        println!("enter process name of apps you want to group seperated by |");
+        println!("enter process name of apps you want to group separated by |");
 
         io::stdin().read_line(&mut method_input).expect("failed to get list of app names");
 
@@ -645,7 +645,7 @@ impl UI {
         let mut method_input_vec: Vec<String>;
 
         if !is_precommanded{
-            println!("enter id of apps you wanna swap");
+            println!("enter id of the two apps you wanna swap separated by space");
             stdin().read_line(&mut method_input).expect("failed to get id of apps");
             method_input_vec = method_input.split(' ').map(|s| s.to_string()).collect();
         }
@@ -672,7 +672,8 @@ impl UI {
     }
 
     pub fn help() {
-        let string = concat!("enter number of the app or a group to restart them \n" ,
+        let string = concat!(
+            "enter number of the app or a group to restart them \n" ,
             "you can enter number of apps and their group separated by spaces to restart them in a sequence\n\n" ,
             "-------------\n\n" ,
             "commands:\n\n" ,
