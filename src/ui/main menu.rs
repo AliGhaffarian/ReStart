@@ -184,6 +184,7 @@ impl UI {
             "group" => self.group_app(),
             "print" => self.prints(input_vec),
             "edit" => self.edits(input_vec),
+            "swap" => self.swap(input_vec),
             _ =>return false,
         }
         true
@@ -306,7 +307,7 @@ impl UI {
 
 
     pub fn input_launch_info()->Option<LaunchInfo>{
-        println!("provide one of these launch methods:\n1_app's address\n2_app's name(not guaranteed to work\n3_custom command");
+        println!("provide one of these launch methods:\n1_app's address\n2_app's name(not guaranteed to work)\n3_custom command");
 
         let mut num_input = String::new();
         let mut launch_info_input = String::new();
@@ -631,8 +632,64 @@ impl UI {
         self.app_db.remove_groups(&vec![method_input.clone()]);
         self.defined_groups.rem(method_input);
     }
+
+    pub fn swap(&mut self, mut input_vec : Vec<String>){
+
+        if !input_vec.is_empty(){
+            input_vec.remove(0);
+        }
+
+        let is_precommanded = input_vec.len() >= 2;
+
+        let mut method_input = String::new();
+        let mut method_input_vec: Vec<String>;
+
+        if !is_precommanded{
+            println!("enter id of apps you wanna swap");
+            stdin().read_line(&mut method_input).expect("failed to get id of apps");
+            method_input_vec = method_input.split(' ').map(|s| s.to_string()).collect();
+        }
+        else {
+            method_input_vec = input_vec;
+        }
+
+        if method_input_vec.len() < 2 {return}
+
+        let mut nums = Vec::<usize>::new();
+
+        for index in 0..2{
+            match method_input_vec[index].trim().parse() {
+                Ok(parsed_string) => nums.push(parsed_string),
+                _ => return
+            }
+        }
+
+        if self.app_db.swap(nums[0], nums[1]) == false{
+            println!("invalid input");
+            util::get_key();
+        }
+
+    }
+
     pub fn help() {
-        println!("enter number of the app or a group to restart them \nyou can enter number of apps and their group separated by spaces to restart them in a sequence\n\n-------------\ncommands:\nreg [app/group] \ndel [app/group] \ngroup [apps] \nedit [apps/pref]\nsave \nquit \n");
+        let string = concat!("enter number of the app or a group to restart them \n" ,
+            "you can enter number of apps and their group separated by spaces to restart them in a sequence\n\n" ,
+            "-------------\n\n" ,
+            "commands:\n\n" ,
+            "reg [app/group] \n" ,
+            "registers app or group name \n" ,
+            "name launch method works if the app can be launch by its name in terminal \n\n" ,
+            "del [app/group] \n" ,
+            "delete an app or group \n\n" ,
+            "group [apps] \n" ,
+            "add a group for a list of apps by their process names\n\n" ,
+            "edit [apps/pref]\n" ,
+            "edit process name of an app or user preference\n\n" ,
+            "save \n" ,
+            "quit \n");
+
+
+        println!("{}", string);
         util::get_key();
     }
 }
