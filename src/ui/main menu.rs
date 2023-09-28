@@ -21,7 +21,24 @@ use std::string::ToString;
 
 use std::string::String;
 
-use serde::de::Unexpected::Str;
+
+#[derive(Serialize, Deserialize, Clone, Default)]
+struct UserPref{
+    pub groups_included : bool,
+    pub enable_alias : bool
+}
+
+impl UserPref {
+    pub fn new()->Self{
+        Self{
+            groups_included : true,
+            enable_alias : false
+        }
+    }
+    pub fn print(&self){
+        println!("1_print groups of each app : {}\n2_print alias instead of process name if available : {}", self.groups_included, self.enable_alias)
+    }
+}
 
 #[derive(Serialize, Deserialize, Clone, Default)]
 pub struct UI
@@ -29,6 +46,7 @@ pub struct UI
     pub app_db : AppDB,
     pub saved : bool,
     pub defined_groups : Names,
+    user_pref : UserPref
 }
 
 impl UI {
@@ -39,9 +57,11 @@ impl UI {
             app_db : AppDB::new(),
             saved : false,
             defined_groups : Names::new(),
+            user_pref : UserPref::new()
         }
+
     }
-    pub fn print_app_index(& self, index : usize, groups_included : bool)
+    pub fn print_app_index(& self, index : usize)
     {
         let mut print_string : String;
 
@@ -51,14 +71,18 @@ impl UI {
         };
 
 
-        print_string = match app.get_alias() {
-            Some(alias)=>alias,
-            None => app.get_process_name(),
-        };
+        if self.user_pref.enable_alias{
+            print_string = match app.get_alias() {
+                Some(alias)=>alias,
+                None => app.get_process_name(),
+            };
+        }
+
+        else {print_string = app.get_process_name();}
 
         print_string = format!("{} ", print_string);
 
-        if groups_included{
+        if self.user_pref.groups_included{
             for group in app.get_groups().get_all()
             {
                 print_string = format!("{}  {}", print_string, group)
@@ -73,7 +97,7 @@ impl UI {
         for i in 0..=self.app_db.len() - 1
         {
             print!("{} _ ", i);
-            self.print_app_index(i, groups_included);
+            self.print_app_index(i);
             println!();
         }
     }
@@ -111,7 +135,7 @@ impl UI {
 
         match stdin().read_line(&mut input){
             Ok(_) =>{},
-            error =>{return},
+            _ =>{return},
         }
 
         if input.trim().len() == 0 {return}
@@ -129,7 +153,6 @@ impl UI {
         if self.special_command_handler(input_vec.clone()) {
             return
         }
-
 
         for mut input in input_vec
         {
@@ -166,13 +189,57 @@ impl UI {
         true
     }
 
+    pub fn change_user_prefrences(&mut self, mut input_vec : Vec<String>){
+
+        if !input_vec.is_empty(){
+            input_vec.remove(0);
+        }
+        let is_precommanded = !input_vec.is_empty();
+
+        let mut method_input = String::new();
+
+        if is_precommanded == false{
+            self.user_pref.print();
+            println!("enter number of any preference to toggle");
+            stdin().read_line(&mut method_input);
+        }
+        else{
+            method_input = input_vec[0].clone();
+        }
+
+
+        method_input = method_input.trim().to_string();
+
+
+        let num = match method_input.parse(){
+            Ok(num) => num,
+            Err(err) =>{
+                println!("{}", err);
+                return
+            }
+        };
+
+        match num{
+            1 => {
+                self.user_pref.groups_included = !self.user_pref.groups_included;
+                return
+                }
+            2 => {
+                self.user_pref.enable_alias = !self.user_pref.enable_alias;
+                return
+            }
+            _ => return,
+        }
+    }
+
     pub fn edits(&mut self, mut input_vec : Vec<String>)
     {
         if input_vec.is_empty(){return}
         input_vec.remove(0);
-        match input_vec[0].trim(){
+        match input_vec[0].to_lowercase().trim(){
             "app" => self.edit_app_alias(input_vec),
             "group" => self.edit_group(input_vec),
+            "pref" => self.change_user_prefrences(input_vec),
             _ => return,
         }
     }
@@ -558,7 +625,7 @@ impl UI {
         self.defined_groups.rem(method_input);
     }
     pub fn help() {
-        println!("enter number of the app or a group to restart them \nyou can enter number of apps and their group separated by spaces to restart them in a sequence\n\n-------------\ncommands:\nreg [app/group] \ndel [app/group] \ngroup [apps] \nedit [apps]\nsave \nquit \n");
+        println!("enter number of the app or a group to restart them \nyou can enter number of apps and their group separated by spaces to restart them in a sequence\n\n-------------\ncommands:\nreg [app/group] \ndel [app/group] \ngroup [apps] \nedit [apps/pref]\nsave \nquit \n");
         util::get_key();
     }
 }
