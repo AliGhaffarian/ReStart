@@ -2,6 +2,9 @@
 this app purpose is to simplify and speed up the process of restarting ( or launching if not running ) single or multiple apps at once
 all datas will be saved in files and groups.json
 
+kill method :
+this app will use SIGKILL signal to kill your apps so restart any app if you have unsaved data on them 
+
 process name
 you can see process name of your app by
 linux : searching your app name in task manager or relevant apps
