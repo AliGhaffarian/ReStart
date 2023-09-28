@@ -265,6 +265,16 @@ impl AppDB
         Ok(app_db)
     }
 
+    pub fn swap(&mut self, first_index : usize , second_index : usize)->bool{
+
+        if (self.is_index_inbound(first_index) || self.is_index_inbound(second_index)) == false{
+            return false
+        }
+
+        self.apps.swap(first_index, second_index);
+        true
+    }
+
     pub fn add_group(&mut self, apps : &Vec<String>, groups : &Vec<String>)
     {
         for app in apps
