@@ -174,7 +174,7 @@ impl UI {
 
     pub fn special_command_handler(&mut self, input_vec : Vec<String>)->bool
     {
-        match input_vec[0].trim()
+        match input_vec[0].to_lowercase().trim()
         {
             "help" => Self::help(),
             "quit" => self.quit(),
@@ -234,8 +234,11 @@ impl UI {
 
     pub fn edits(&mut self, mut input_vec : Vec<String>)
     {
+        if !input_vec.is_empty(){
+            input_vec.remove(0);}
+
         if input_vec.is_empty(){return}
-        input_vec.remove(0);
+
         match input_vec[0].to_lowercase().trim(){
             "app" => self.edit_app_alias(input_vec),
             "group" => self.edit_group(input_vec),
@@ -281,8 +284,10 @@ impl UI {
 
     pub fn regs(&mut self, mut input_vec : Vec<String>)
     {
-        if input_vec.is_empty(){return};
-        input_vec.remove(0);
+        if !input_vec.is_empty(){
+            input_vec.remove(0);}
+
+        if input_vec.is_empty(){return}
 
         match input_vec[0].trim()
         {
@@ -550,10 +555,12 @@ impl UI {
 
     pub fn dels(&mut self , mut input_vec : Vec<String>)
     {
-        if input_vec.is_empty(){return;}
-        input_vec.remove(0);
+        if !input_vec.is_empty(){
+        input_vec.remove(0);}
 
-        match input_vec[0].trim()
+        if input_vec.is_empty(){return}
+
+        match input_vec[0].to_lowercase().trim()
         {
             "app" => self.del_app(input_vec),
             "group" => self.del_group(input_vec),
