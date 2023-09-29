@@ -309,6 +309,9 @@ impl AppDB
     {
         self.groups.remove_groups(group_names.clone())
     }
+    pub fn remove_group_by_group_name(&mut self, group_name : &String)->bool{
+        self.groups.remove_group(group_name.clone())
+    }
 
     pub fn save_to_json(filename: &str, data: &AppDB) -> Result<(), Box<dyn std::error::Error>> {
         let json_data = serde_json::to_string(data)?;
@@ -362,7 +365,30 @@ impl AppDB
         }
     }
 
+    pub fn get_member_group_names_index(& self, index : usize) ->Vec<String>{
+        self.groups.get_member_group_names(index)
+    }
+    pub fn get_group_names_all(& self)->Vec<String>{
+        self.groups.get_all_names()
+    }
+    pub fn get_groups_all(& self)->Vec<Group>{
+        self.groups.get_all()
+    }
+    pub fn exists_group(& self, group_name : &String)->bool{
+        self.groups.exists(&group_name)
+    }
 
+    pub fn add_group(&mut self, group : &Group)->bool{
+        match self.exists_group(&group.get_name()){
+            true =>return false,
+            false=>{
+                self.groups.add(group.clone());
+                true
+            }
+        }
+    }
 
-
+    pub fn search_group_by_name(& self, group_name : &String)->Option<usize>{
+        self.groups.search_group_name(&group_name)
+    }
 }

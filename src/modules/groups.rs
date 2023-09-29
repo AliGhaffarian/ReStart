@@ -119,7 +119,7 @@ impl Groups {
         }
         false
     }
-    pub fn gather_by_name(&self, names : Vec<String>)->Vec<Group>{
+    pub fn gather_groups_by_name(&self, names : Vec<String>) ->Vec<Group>{
         let indexes  = self.search_group_names(names);
 
         let mut result = Vec::<Group>::new();

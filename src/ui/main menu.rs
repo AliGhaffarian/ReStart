@@ -16,7 +16,7 @@ use std::io::Write;
 use crate::groups::{Group, Groups};
 use crate::appclass::{App, LaunchInfo};
 use crate::appdb::AppDB;
-use crate::utilities::util;
+use crate::utilities::Util;
 
 use std::string::ToString;
 
@@ -82,18 +82,18 @@ impl UI {
         print_string = format!("{} ", print_string);
 
         if self.user_pref.groups_included{
-            for group in self.app_db.ge
+            for group in self.app_db.get_member_group_names_index(index)
             {
-                print_string = format!("{}  {}", print_string, group.get_name())
+                print_string = format!("{}  {}", print_string, group)
             }
         }
 
         print!("{}", print_string)
 
     }
-    pub fn print_all_apps(&self, groups_included : bool)
+    pub fn print_all_apps(&self)
     {
-        for i in 0..=self.app_db.len() - 1
+        for i in 0..=self.app_db.apps_len() - 1
         {
             print!("{} _ ", i);
             self.print_app_index(i);
@@ -109,7 +109,7 @@ impl UI {
         input_vec.remove(0);
 
         match input_vec[0].trim() {
-            "apps"=>self.print_all_apps(true),
+            "apps"=>self.print_all_apps(),
             "groups"=>self.print_all_groups(),
             _ =>return,
         }
@@ -117,18 +117,18 @@ impl UI {
     }
 
     pub fn print_all_groups(&self){
-        for group in &self.defined_groups.get_all(){
+        for group in &self.app_db.get_groups_all(){
             println!("name : {}  working directory : {}", group.get_name(), group.get_working_directory().unwrap_or("None".to_string()));
         }
-        util::get_key();
+        Util::get_key();
     }
 
     pub fn main_menu(&mut self)
     {
-        if self.app_db.len() == 0{
+        if self.app_db.apps_len() == 0{
             println!("no apps detected enter help to get started!")
         }
-        else{self.print_all_apps(true);}
+        else{self.print_all_apps();}
 
         let mut input = String::new();
 
@@ -157,16 +157,16 @@ impl UI {
         {
             input = input.trim().to_string();
 
-            if util::is_all_digits(&input) {
-                self.app_db.app_index_action(input.trim().parse().unwrap(), "restart");
-                continue;
-            }
-
-            if self.defined_groups.exists(&input)
-            {
-                self.app_db.app_groups_action(&vec![input.clone()], "restart")
-            }
-
+            let _ :usize = match input.trim().parse() {
+                Ok(index) => {
+                    self.app_db.app_index_action(index, "restart", None);
+                    0
+                },
+                _ =>{
+                    self.app_db.app_groups_action(&vec![input.clone()], "restart");
+                    0
+                },
+            };
 
         }
     }
@@ -409,18 +409,17 @@ impl UI {
             _ => group_working_directory = Some(method_input)
         }
 
-        if self.defined_groups.exists(&group_name) {
+        if self.app_db.exists_group(&group_name) {
             println!("group already exists");
-            util::get_key();
+            Util::get_key();
             return;
         }
 
-        let mut name = Group::new();
-        name.set_name(group_name);
-        name.set_working_directory(group_working_directory);
+        let mut group = Group::new(group_name);
+        group.set_working_directory(group_working_directory);
 
         self.saved = false;
-        self.defined_groups.add(name);
+        self.app_db.add_group(&group);
     }
 
     pub fn reg_app(&mut self, mut input_vec : Vec<String>)->bool
@@ -443,7 +442,7 @@ impl UI {
         match self.app_db.exists_app_process_name(&process_name){
             true =>{
                 println!("app already exists");
-                util::get_key();
+                Util::get_key();
                 return false;
             }
             false =>{}
@@ -493,13 +492,14 @@ impl UI {
 
         method_input = method_input.trim().to_string();
 
-        let index = self.app_db.clone().search_process_name(&method_input) as usize;
-
-        if index == usize::MAX{
-            println!("app not found");
-            util::get_key();
-            return;
-        }
+        let index = match self.app_db.search_process_name(&method_input){
+            Some(index) => index,
+            None => {
+                println!("app not found");
+                Util::get_key();
+                return
+            }
+        };
 
         if input_vec.is_empty() == false{
             input_vec.remove(0);
@@ -542,7 +542,7 @@ impl UI {
         if self.app_list_validator(app_input.clone()) == false
         {
             println!("one or more app names were invalid");
-            util::get_key();
+            Util::get_key();
             return
         }
 
@@ -558,19 +558,19 @@ impl UI {
         if self.group_list_validator(&group_input) == false
         {
             println!("one or more groups names were invalid");
-            util::get_key();
+            Util::get_key();
             return
         }
 
         self.saved = false;
-        self.app_db.add_members_to_groups(&app_input, &self.defined_groups.gather_by_name(group_input));
+        self.app_db.add_members_to_groups(&app_input, &group_input);
 
     }
     pub fn group_list_validator(&self, group_names : &Vec<String>)->bool
     {
         for group_name in group_names {
 
-            if self.defined_groups.exists(&group_name.trim().to_string()) == false{
+            if self.app_db.exists_group(&group_name.trim().to_string()) == false{
                 return false;
             }
         }
@@ -631,7 +631,7 @@ impl UI {
             io::stdin().read_line(&mut input).expect("Failed to read line");
         }
         self.saved = false;
-        self.app_db.remove_app_name(&method_input);
+        self.app_db.remove_app_process_name(&method_input);
     }
 
     pub fn del_group(&mut self, mut input_vec : Vec<String>)
@@ -645,7 +645,7 @@ impl UI {
 
         if is_precommanded == false{
             println!("enter name of group you want to delete");
-            io::stdin().read_line(&mut method_input).expect("failed to get input");
+            stdin().read_line(&mut method_input).expect("failed to get input");
         }
 
         else{
@@ -654,15 +654,17 @@ impl UI {
 
         method_input = method_input.trim().to_string();
 
-        if !self.defined_groups.exists(&method_input) == false {
-            println!("group doesnt exists");
-            util::get_key();
-            return;
+        match self.app_db.search_group_by_name(&method_input){
+            Some(_)=>{
+                self.app_db.remove_group_by_group_name(&method_input);
+                self.saved = false;
+            }
+            None=>{
+                println!("group not found");
+                Util::get_key();
+            },
         }
-        self.saved = false;
 
-        self.app_db.remove_groups_by_group_name(&vec![method_input.clone()]);
-        self.defined_groups.rem(method_input);
     }
 
     pub fn swap(&mut self, mut input_vec : Vec<String>){
@@ -698,7 +700,7 @@ impl UI {
 
         if self.app_db.swap(nums[0], nums[1]) == false{
             println!("invalid input");
-            util::get_key();
+            Util::get_key();
         }
 
     }
@@ -723,7 +725,7 @@ impl UI {
 
 
         println!("{}", string);
-        util::get_key();
+        Util::get_key();
     }
 }
 

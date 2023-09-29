@@ -1,6 +1,6 @@
 
-//#[path = "ui/main menu.rs"] mod main_menu;
-//use main_menu::UI;
+#[path = "ui/main menu.rs"] mod main_menu;
+use main_menu::UI;
 
 
 #[path = "modules/appdb.rs"] mod appdb;
@@ -34,23 +34,23 @@ fn clear_console() {
 
 
     fn main() {
-/*
-    let mut ui;
-match UI::load_from_json("files and groups.json") {
-    Ok(some_ui) => {
-        ui = some_ui;
-    }
-    Err(_) => {
-        File::create("files and groups.json").expect("Failed to create file");
-        ui = UI::new();
-    }
-}
 
-loop {
-    ui.main_menu();
+        let mut ui;
+    match UI::load_from_json("files and groups.json") {
+        Ok(some_ui) => {
+            ui = some_ui;
+        }
+        Err(_) => {
+            File::create("files and groups.json").expect("Failed to create file");
+            ui = UI::new();
+        }
+    }
 
-    clear_console();
-}
-*/
+    loop {
+        ui.main_menu();
+
+        clear_console();
+    }
+
 
     }
