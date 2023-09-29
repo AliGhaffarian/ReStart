@@ -315,6 +315,11 @@ impl App
 
         App::redirect_output(&mut command, None);
 
+        match Command::new("~").spawn(){
+            Err(error) => println!("{}", error),
+            _ =>{}
+        }
+
         self.command_confirm(&command.spawn(), "runn")
     }
 
@@ -366,10 +371,7 @@ impl App
 
         //App::redirect_output(command, None);
 
-        match Command::new("~").spawn(){
-            Err(error) => println!("{}", error),
-            _ =>{}
-        }
+
 
         let child = command.spawn();
 
