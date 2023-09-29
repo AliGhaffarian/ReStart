@@ -1,137 +1,12 @@
 
-use std::process::Output;
+
 use std::io;
 
 use serde::{Serialize, Deserialize};
 //use serde_json::Result;
 use std::process::{Child, Command, Stdio};
 
-use crate::utilities::util;
-
-
-#[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq)]
-pub struct Names
-{
-    names : Vec<String>,
-}
-
-
-impl Names {
-    pub fn new()->Self
-    {
-        Self{
-            names : Vec::<String>::new()
-        }
-    }
-    pub fn exists(&self, name : &String) -> bool
-    {
-        let to_lower_name = name.trim().to_lowercase();
-
-        for name_in_self in &self.names
-        {
-            if to_lower_name.eq(&name_in_self.to_lowercase()) {
-                return true;
-            }
-        }
-        false
-    }
-
-    //returns amount of failed pushes already existing causes failing to push
-    pub fn adds(&mut self, names : Vec<String>) -> i32
-    {
-        let mut failed_pushes = 0;
-
-        for name in names
-        {
-            if self.add(name) == false{
-                failed_pushes += 1;
-            }
-        }
-        return failed_pushes;
-    }
-    pub fn add(&mut self, mut name: String) -> bool
-    {
-        name = name.trim().to_lowercase();
-
-        return match self.exists(&name){
-            false =>{
-                self.names.push(name);
-                true
-            },
-            true => true
-        }
-    }
-    //returns amount of failed removes
-    pub fn rems(&mut self, names: Vec<String>) -> i32 {
-
-        let mut failed_removes = 0;
-
-        for name in names {
-
-            if self.rem(name) == false{
-                failed_removes += 1
-            }
-        }
-        failed_removes
-    }
-
-    //true if deletes
-    pub fn rem(&mut self, mut name: String) -> bool {
-
-        name = name.trim().to_lowercase();
-
-        return match self.search(&name) {
-            usize::MAX => false,
-            index => {
-                self.names.remove(index);
-                true
-            },
-        };
-    }
-
-    pub fn search(&self, name: &String) ->usize
-    {
-        let to_lower_name = name.trim().to_lowercase();
-
-        match self.names.iter().position(|n| n.eq(&to_lower_name)){
-            Some(index)=>return index,
-            None => usize::MAX,
-        }
-    }
-
-    pub fn searches(&self, names: Vec<String>) ->Vec<usize>
-    {
-        let mut result = Vec::<usize>::new();
-
-        for name in &names {
-            let index = self.search(name);
-
-            if !result.contains(&index) {
-                result.push(index);
-            }
-        }
-        result
-    }
-
-    pub fn clear(&mut self)
-    {
-        self.names.clear();
-    }
-
-    pub fn get_all(&self)->Vec<String>
-    {
-        self.names.clone()
-    }
-
-    pub fn get(&self, index : &usize)->Option<String>
-    {
-        return match *index < self.names.len() {
-            true => Some(self.names[*index].clone()),
-            false => None,
-        }
-    }
-}
-
+use crate::utilities::Util;
 
 #[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq)]
 pub enum LaunchInfo
@@ -178,7 +53,6 @@ impl LaunchInfo{
 pub struct App
 {
     alias : Option<String>,
-    groups: Names,
     process_name : String,
     launch_info : LaunchInfo,
 }
@@ -193,7 +67,6 @@ impl App
             alias : input_alias,
             process_name : input_process_name,
             launch_info : input_launch_info,
-            groups: Names::new(),
         }
     }
 
@@ -235,37 +108,6 @@ impl App
         self.launch_info.clone()
     }
 
-    pub fn get_groups(&self)->Names
-    {
-        self.groups.clone()
-    }
-    pub fn add_group(&mut self, name : String)->bool
-    {
-        self.groups.add(name)
-    }
-    pub fn add_groups(&mut self, names : Vec<String>)->i32
-    {
-        self.groups.adds(names)
-    }
-    pub fn rem_groups(&mut self, names : Vec<String>)->i32 {
-        self.groups.rems(names)
-    }
-
-    pub fn rem_group(&mut self, name : String)->bool{
-        self.groups.rem(name)
-    }
-
-    pub fn search_group(& self, name : &String)->usize
-    {
-        self.groups.search(name)
-    }
-    pub fn search_groups(& self, names : Vec<String>)->Vec<usize>{
-        self.groups.searches(names)
-    }
-    pub fn exists_group(& self, name : &String)->bool{
-        self.groups.exists(name)
-    }
-
 
     pub fn run_windows(&self)->bool{
 
@@ -292,41 +134,46 @@ impl App
 
         self.command_confirm(&command.spawn(), "runn")
     }
-    pub fn run_linux(&self)->bool{
+    pub fn run_linux(&self, directory : Option<String>) ->bool{
 
-        let mut command : Command;
+        let working_directory = match directory{
+            Some(directory) => directory,
+            None => "~".to_string()
+        };
 
-        command = match self.launch_info.get_launch_info()
+        let mut binding = Command::new("cd");
+        let mut command = binding.arg(working_directory);
+
+        let args = match self.launch_info.get_launch_info()
         {
-            LaunchInfo::Address {address : an_address} => Command::new(an_address),
-            LaunchInfo::Name { name : a_name} => Command::new(a_name),
+            LaunchInfo::Address {address : an_address} => vec![an_address],
+            LaunchInfo::Name { name : a_name} => vec![a_name],
             LaunchInfo::CustomCommand {command : a_command, args : some_args} => {
                 
-                let mut a_command = Command::new(a_command);
+                let mut args = vec![a_command];
 
                 if !some_args.is_empty() {
-                    a_command.args(some_args);
+                    for arg in some_args{
+                        args.push(arg);
+                    }
                 }
                 // Clone the command before passing it
-                a_command
+                args
             },
             LaunchInfo::CantLaunch => return false,
         };
 
-        App::redirect_output(&mut command, None);
+        command.args(args);
 
-        match Command::new("~").spawn(){
-            Err(error) => println!("{}", error),
-            _ =>{}
-        }
+        App::redirect_output(&mut command, None);
 
         self.command_confirm(&command.spawn(), "runn")
     }
 
-    pub fn run(&self)->bool
+    pub fn run(&self, directory : Option<String>) ->bool
     {    
         #[cfg(target_os = "linux")]{
-            self.run_linux()
+            self.run_linux(directory)
         }
         #[cfg(target_os = "windows")]{
             self.run_windows()
@@ -355,7 +202,7 @@ impl App
             Ok(output)=>{
                 Some(String::from_utf8(output.stdout).unwrap())
             },
-            Error => None,
+            _ => None,
         }
     }
 
@@ -394,15 +241,15 @@ impl App
     }
 
 
-    pub fn restart(&self)
+    pub fn restart(&self, working_directory : Option<String>)
     {
         if App::is_app_alive(self.process_name.as_str()) {
             self.kill();}
 
-        self.run();
+        self.run(working_directory);
     }
 
-    pub fn action(&mut self, action : &str)->bool
+    pub fn action(&mut self, action : &str, working_directory: Option<String>) ->bool
     {
         return match action
         {
@@ -410,15 +257,16 @@ impl App
                 self.kill();
                 true},
             "run" => {
-                self.run();
+                self.run(working_directory);
                 true},
             "restart" => {
-                self.restart();
+                self.restart(working_directory);
                 true
             },
             _ => false,
         }
     }
+
 
     pub fn is_app_alive_windows(process_name : &str) -> bool{
         // Use the `tasklist` command on Windows to list running processes.
@@ -480,7 +328,7 @@ impl App
 
                 }
 
-                util::get_key();
+                Util::get_key();
                 false
             }
         }
