@@ -1,9 +1,9 @@
 use std::io;
 
 
-pub struct util{}
+pub struct Util;
 
-impl util
+impl Util
 {
     pub fn is_all_digits(input: & String) -> bool {
         let trimmed_input = input.trim();

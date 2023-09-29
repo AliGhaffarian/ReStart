@@ -13,7 +13,8 @@ use std::fs::File;
 use std::io::{Read, stdin};
 use std::io::Write;
 
-use crate::appclass::{App, LaunchInfo, Names};
+use crate::groups::{Group, Groups};
+use crate::appclass::{App, LaunchInfo};
 use crate::appdb::AppDB;
 use crate::utilities::util;
 
@@ -45,7 +46,6 @@ pub struct UI
 {
     pub app_db : AppDB,
     pub saved : bool,
-    pub defined_groups : Names,
     user_pref : UserPref
 }
 
@@ -56,7 +56,6 @@ impl UI {
         Self{
             app_db : AppDB::new(),
             saved : false,
-            defined_groups : Names::new(),
             user_pref : UserPref::new()
         }
 
@@ -83,9 +82,9 @@ impl UI {
         print_string = format!("{} ", print_string);
 
         if self.user_pref.groups_included{
-            for group in app.get_groups().get_all()
+            for group in self.app_db.ge
             {
-                print_string = format!("{}  {}", print_string, group)
+                print_string = format!("{}  {}", print_string, group.get_name())
             }
         }
 
@@ -119,7 +118,7 @@ impl UI {
 
     pub fn print_all_groups(&self){
         for group in &self.defined_groups.get_all(){
-            println!("{}", group);
+            println!("name : {}  working directory : {}", group.get_name(), group.get_working_directory().unwrap_or("None".to_string()));
         }
         util::get_key();
     }
@@ -165,7 +164,7 @@ impl UI {
 
             if self.defined_groups.exists(&input)
             {
-                self.app_db.app_group_action(&vec![input.clone()], "restart")
+                self.app_db.app_groups_action(&vec![input.clone()], "restart")
             }
 
 
@@ -378,22 +377,50 @@ impl UI {
 
         if is_precommanded == false{
             println!("enter name of group");
-            io::stdin().read_line(&mut method_input).expect("failed to get input");
+            stdin().read_line(&mut method_input).expect("failed to get input");
         }
 
         else{
             method_input = input_vec[0].clone();
         }
 
-        method_input = method_input.trim().to_string();
+        let group_name = method_input.trim().to_string();
+        method_input.clear();
 
-        if self.defined_groups.exists(&method_input) {
+
+        if input_vec.is_empty() == false {
+            input_vec.remove(0);
+        }
+        let is_precommanded = input_vec.is_empty() == false;
+
+        if is_precommanded == false{
+            println!("[optional] enter working directory for this group of apps");
+            stdin().read_line(&mut method_input).expect("failed to get input");
+        }
+        else{
+            method_input = input_vec[0].clone();
+        }
+
+        method_input = method_input.trim().to_string();
+        let group_working_directory : Option<String>;
+
+        match method_input.len() {
+            0 => group_working_directory = None,
+            _ => group_working_directory = Some(method_input)
+        }
+
+        if self.defined_groups.exists(&group_name) {
             println!("group already exists");
             util::get_key();
             return;
         }
+
+        let mut name = Group::new();
+        name.set_name(group_name);
+        name.set_working_directory(group_working_directory);
+
         self.saved = false;
-        self.defined_groups.add(method_input);
+        self.defined_groups.add(name);
     }
 
     pub fn reg_app(&mut self, mut input_vec : Vec<String>)->bool
@@ -413,7 +440,7 @@ impl UI {
             None => return false
         }
 
-        match self.app_db.exists_name(&process_name){
+        match self.app_db.exists_app_process_name(&process_name){
             true =>{
                 println!("app already exists");
                 util::get_key();
@@ -496,14 +523,18 @@ impl UI {
 
     }
 
+
     pub fn group_app(&mut self)
     {
         let app_input : Vec<String>;
+
         let mut method_input = String::new();
-        let group_input;
+
+        let group_input: Vec<String>;
+
         println!("enter process name of apps you want to group separated by |");
 
-        io::stdin().read_line(&mut method_input).expect("failed to get list of app names");
+        stdin().read_line(&mut method_input).expect("failed to get list of app names");
 
         app_input = method_input.split('|').map(|s| s.trim().to_string()).collect();
 
@@ -520,7 +551,7 @@ impl UI {
 
         println!("enter name of groups separated by space");
 
-        io::stdin().read_line(&mut method_input).expect("failed to get list of app names");
+        stdin().read_line(&mut method_input).expect("failed to get list of app names");
 
         group_input = method_input.split(' ').map(|s| s.trim().to_string()).collect();
 
@@ -530,8 +561,9 @@ impl UI {
             util::get_key();
             return
         }
+
         self.saved = false;
-        self.app_db.add_group(&app_input, &group_input);
+        self.app_db.add_members_to_groups(&app_input, &self.defined_groups.gather_by_name(group_input));
 
     }
     pub fn group_list_validator(&self, group_names : &Vec<String>)->bool
@@ -547,7 +579,7 @@ impl UI {
     pub fn app_list_validator(&self, app_names : Vec<String>)->bool
     {
         for app_name in app_names {
-            if self.app_db.exists_name(&app_name.trim().to_string()) == false{
+            if self.app_db.exists_app_process_name(&app_name.trim().to_string()) == false{
                 return false;
             }
         }
@@ -591,7 +623,7 @@ impl UI {
         method_input = method_input.trim().to_string();
 
 
-        if self.app_db.exists_name(&method_input) == false{
+        if self.app_db.exists_app_process_name(&method_input) == false{
             println!("app doesnt exists");
 
             println!("Press Enter to continue...");
@@ -629,7 +661,7 @@ impl UI {
         }
         self.saved = false;
 
-        self.app_db.remove_groups(&vec![method_input.clone()]);
+        self.app_db.remove_groups_by_group_name(&vec![method_input.clone()]);
         self.defined_groups.rem(method_input);
     }
 

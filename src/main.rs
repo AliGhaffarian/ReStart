@@ -1,27 +1,24 @@
 
-#[path = "ui/main menu.rs"] mod main_menu;
-use main_menu::UI;
+//#[path = "ui/main menu.rs"] mod main_menu;
+//use main_menu::UI;
 
 
 #[path = "modules/appdb.rs"] mod appdb;
-use appdb::AppDB;
-
 
 #[path = "modules/appclass.rs"] mod appclass;
-use crate::appclass::{LaunchInfo, Names};
-use appclass::App;
+
 
 #[path = "ui/utilities.rs"] mod utilities;
 
+#[path = "modules/groups.rs"] mod groups;
 
 use std::io::{self, stdin, Write};
 use std::process::Command;
 
 use std::fs::File;
-use crate::utilities::util;
+use crate::appclass::LaunchInfo;
 
 
-#[allow(dead_code)]
 fn clear_console() {
     if cfg!(target_os = "windows") {
         // On Windows, use the "cls" command to clear the console.
@@ -37,22 +34,23 @@ fn clear_console() {
 
 
     fn main() {
-
-        let mut ui;
-    match UI::load_from_json("files and groups.json") {
-        Ok(some_ui) => {
-            ui = some_ui;
-        }
-        Err(_) => {
-            File::create("files and groups.json").expect("Failed to create file");
-            ui = UI::new();
-        }
+/*
+    let mut ui;
+match UI::load_from_json("files and groups.json") {
+    Ok(some_ui) => {
+        ui = some_ui;
     }
-
-    loop {
-        ui.main_menu();
-
-        clear_console();
+    Err(_) => {
+        File::create("files and groups.json").expect("Failed to create file");
+        ui = UI::new();
     }
+}
+
+loop {
+    ui.main_menu();
+
+    clear_console();
+}
+*/
 
     }
