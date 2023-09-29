@@ -6,7 +6,11 @@ kill method :
 this app will use SIGKILL signal to kill your apps so restart any app if you have unsaved data on them 
 
 process name
+
 you can see process name of your app by
+
 linux : searching your app name in task manager or relevant apps
+
 windows : right clicking on the main process in taskmanager -> go to details -> properties -> "executable name" + "format" of file
+
 shortcut files are not guaranteed to work in windows
