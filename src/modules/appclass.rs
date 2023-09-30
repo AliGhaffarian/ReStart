@@ -58,7 +58,7 @@ impl Names {
                 self.names.push(name);
                 true
             },
-            true => true
+            true => false
         }
     }
     //returns amount of failed removes
