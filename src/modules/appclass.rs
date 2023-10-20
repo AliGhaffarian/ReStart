@@ -1,14 +1,14 @@
 
 
 use std::io;
-
+use std::cmp::Ordering;
 use serde::{Serialize, Deserialize};
 //use serde_json::Result;
 use std::process::{Child, Command, Stdio};
 
 use crate::utilities::Util;
 
-#[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq, PartialOrd, Eq, Ord)]
 pub enum LaunchInfo
 {
     Address
@@ -49,7 +49,7 @@ impl LaunchInfo{
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq, PartialOrd, Eq)]
 pub struct App
 {
     alias : Option<String>,
@@ -249,7 +249,7 @@ impl App
         self.run(working_directory);
     }
 
-    pub fn action(&mut self, action : &str, working_directory: Option<String>) ->bool
+    pub fn action(& self, action : &str, working_directory: Option<String>) ->bool
     {
         return match action
         {
@@ -346,7 +346,48 @@ impl App
         }
     }
 
+    pub fn print(&self, numbered : bool){
+
+        if numbered == true{
+            print!("{}_", 1);
+        }
+
+        println!("Alias : {}", self.alias.clone().unwrap_or("none".to_string()));
+
+        if numbered == true{
+            print!("{}_", 2);
+        }
+
+        println!("Process Name : {}", self.process_name);
+
+        if numbered == true{
+            print!("{}_", 3);
+        }
+
+        print!("Launch Method : ");
+
+        match self.clone().launch_info{
+            LaunchInfo::CantLaunch =>println!("None"),
+            LaunchInfo::Address {address} => println!("Address \n\tAddress: {}", address),
+            LaunchInfo::Name {name} => println!("Variable Name \n\tVariable Name: {}", name),
+            LaunchInfo::CustomCommand {command, args} => {
+                print!("Custom Command\n\tCommand: {}\n\tArgs: ",command);
+                for arg in args {
+                    print!("{} ", arg);
+                }
+                println!();
+            }
+        }
+    }
+
 }
+
+impl Ord for App {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.process_name.cmp(&other.process_name)
+    }
+}
+
 
 
 
