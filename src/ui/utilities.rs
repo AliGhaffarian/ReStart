@@ -11,7 +11,7 @@ impl Util
         let _ = io::stdin().read_line(&mut input).unwrap();
     }
 
-    fn clear_console() {
+    pub fn clear_console() {
         if cfg!(target_os = "windows") {
             // On Windows, use the "cls" command to clear the console.
             let _ = Command::new("cmd").arg("/c").arg("cls").status();
@@ -20,5 +20,12 @@ impl Util
             print!("{}[2J{}[1;1H", 27 as char, 27 as char);
             io::stdout().flush().unwrap();
         }
+    }
+    pub fn string_repeater(string : &str, times : usize) ->String{
+        let mut result = String::new();
+        for _ in 1..=times{
+            result += string.clone();
+        }
+        result
     }
 }

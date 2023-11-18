@@ -13,7 +13,7 @@ use std::fs::File;
 use std::io::{Read, stdin};
 use std::io::Write;
 
-use crate::groups::{Group, Groups};
+use crate::groups::{Group};
 use crate::appclass::{App, LaunchInfo};
 use crate::appdb::AppDB;
 use crate::utilities::Util;
@@ -26,7 +26,8 @@ use std::string::String;
 #[derive(Serialize, Deserialize, Clone, Default)]
 struct UserPref{
     pub groups_included : bool,
-    pub enable_alias : bool
+    pub enable_alias : bool,
+    pub custom_order : bool,
 }
 
 impl UserPref {
@@ -82,7 +83,7 @@ impl UI {
         print_string = format!("{} ", print_string);
 
         if self.user_pref.groups_included{
-            for group in self.app_db.get_member_group_names_index(index)
+            for group in self.app_db.group_names_of_app(index)
             {
                 print_string = format!("{}  {}", print_string, group)
             }
@@ -563,7 +564,7 @@ impl UI {
         }
 
         self.saved = false;
-        self.app_db.add_members_to_groups(&app_input, &group_input);
+        self.app_db.add_member_to_groups(&app_input, &group_input);
 
     }
     pub fn group_list_validator(&self, group_names : &Vec<String>)->bool

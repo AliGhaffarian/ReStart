@@ -346,34 +346,37 @@ impl App
         }
     }
 
-    pub fn print(&self, numbered : bool){
+    pub fn print(&self, indent_level : usize, numbered : bool){
 
+        let indent_string = Util::string_repeater("\t", indent_level);
         if numbered == true{
+            print!("{}", indent_string);
             print!("{}_", 1);
         }
 
         println!("Alias : {}", self.alias.clone().unwrap_or("none".to_string()));
 
         if numbered == true{
-            print!("{}_", 2);
+
+            print!("{}{}_",indent_string ,2);
         }
 
         println!("Process Name : {}", self.process_name);
 
         if numbered == true{
-            print!("{}_", 3);
+            print!("{}{}_", indent_string,3);
         }
 
         print!("Launch Method : ");
 
         match self.clone().launch_info{
-            LaunchInfo::CantLaunch =>println!("None"),
-            LaunchInfo::Address {address} => println!("Address \n\tAddress: {}", address),
-            LaunchInfo::Name {name} => println!("Variable Name \n\tVariable Name: {}", name),
+            LaunchInfo::CantLaunch =>println!("{}None",indent_string ),
+            LaunchInfo::Address {address} => println!("Address \n{}\tAddress: {}",indent_string , address),
+            LaunchInfo::Name {name} => println!("Variable Name \n{}\tVariable Name: {}",indent_string , name),
             LaunchInfo::CustomCommand {command, args} => {
-                print!("Custom Command\n\tCommand: {}\n\tArgs: ",command);
+                print!("{}Custom Command\n\tCommand: {}\n\tArgs: ",indent_string ,command);
                 for arg in args {
-                    print!("{} ", arg);
+                    print!("{}{} ",indent_string , arg);
                 }
                 println!();
             }
